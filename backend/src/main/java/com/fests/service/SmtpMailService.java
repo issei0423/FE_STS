@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 
 /** Brevo SMTP 経由で実際にメールを送信する本番用実装 (docs/04, docs/06 準拠)。 */
 @Service
-@Profile("!test")
+@Profile("!test & !local")
 @RequiredArgsConstructor
 public class SmtpMailService implements MailService {
 

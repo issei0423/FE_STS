@@ -5,9 +5,11 @@ import com.fests.dto.LoginResponse;
 import com.fests.dto.MessageResponse;
 import com.fests.dto.ResendVerificationRequest;
 import com.fests.dto.SignupRequest;
+import com.fests.dto.SignupResponse;
 import com.fests.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,17 +20,25 @@ public class AuthController {
 
     private final AuthService authService;
 
+    @Value("${app.dev.expose-verification-link:false}")
+    private boolean exposeVerificationLink;
+
+    @Value("${app.mail.verify-url-base}")
+    private String verifyUrlBase;
+
     @PostMapping("/signup")
-    public ResponseEntity<MessageResponse> signup(@Valid @RequestBody SignupRequest req) {
-        authService.signup(req);
+    public ResponseEntity<SignupResponse> signup(@Valid @RequestBody SignupRequest req) {
+        String token = authService.signup(req);
+        String message = "確認メールを送信しました。24時間以内にリンクをクリックしてください。";
         return ResponseEntity.accepted()
-            .body(new MessageResponse("確認メールを送信しました。24時間以内にリンクをクリックしてください。"));
+            .body(new SignupResponse(message, buildDevVerificationUrl(token)));
     }
 
     @PostMapping("/resend-verification")
-    public ResponseEntity<MessageResponse> resend(@Valid @RequestBody ResendVerificationRequest req) {
-        authService.resendVerification(req.getEmail());
-        return ResponseEntity.ok(new MessageResponse("確認メールを再送信しました。"));
+    public ResponseEntity<SignupResponse> resend(@Valid @RequestBody ResendVerificationRequest req) {
+        String token = authService.resendVerification(req.getEmail());
+        return ResponseEntity.ok(
+            new SignupResponse("確認メールを再送信しました。", buildDevVerificationUrl(token)));
     }
 
     @GetMapping("/verify")
@@ -39,5 +49,12 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest req) {
         return ResponseEntity.ok(authService.login(req));
+    }
+
+    private String buildDevVerificationUrl(String token) {
+        if (!exposeVerificationLink || token == null) {
+            return null;
+        }
+        return verifyUrlBase + "?token=" + token;
     }
 }

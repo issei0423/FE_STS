@@ -35,7 +35,8 @@ public class AuthService {
     @Value("${app.mail.token-expire-hours}")
     private int tokenExpireHours;
 
-    public void signup(SignupRequest req) {
+    /** @return 発行した確認トークン(呼び出し元がdevリンク生成に使う) */
+    public String signup(SignupRequest req) {
         if (userRepository.existsByEmail(req.getEmail())) {
             throw new EmailAlreadyExistsException(req.getEmail());
         }
@@ -47,23 +48,23 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(req.getTempPassword()));
         userRepository.save(user);
 
-        issueAndSendVerification(user);
+        return issueAndSendVerification(user);
     }
 
-    public void resendVerification(String email) {
+    public String resendVerification(String email) {
         User user = userRepository.findByEmail(email)
             .orElseThrow(() -> new ApiException(
                 org.springframework.http.HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "ユーザーが見つかりません"));
 
         if (user.isVerified()) {
-            return;
+            return null;
         }
 
         verificationRepository.deleteByUser(user);
-        issueAndSendVerification(user);
+        return issueAndSendVerification(user);
     }
 
-    private void issueAndSendVerification(User user) {
+    private String issueAndSendVerification(User user) {
         String token = UUID.randomUUID().toString();
         EmailVerification verification = new EmailVerification();
         verification.setUser(user);
@@ -72,6 +73,7 @@ public class AuthService {
         verificationRepository.save(verification);
 
         mailService.sendVerificationEmail(user, token);
+        return token;
     }
 
     public LoginResponse verify(String token) {

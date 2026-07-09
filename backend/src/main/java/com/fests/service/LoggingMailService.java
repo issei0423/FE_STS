@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 /** テスト用のスタブ実装。実際には送信せず内容をログに出すだけ(Brevo認証情報が無くても動く)。 */
 @Slf4j
 @Service
-@Profile("test")
+@Profile("test | local")
 public class LoggingMailService implements MailService {
 
     @Override
