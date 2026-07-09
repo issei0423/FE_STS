@@ -11,6 +11,18 @@
 
 ## ローカルでの実行
 
+### フロントエンドと繋いで試す(MySQL/Brevo不要)
+
+`local` プロファイルは H2 のファイルDB (`backend/data/`) を使い、メールは実送信せずログ出力するだけなので、そのまま起動できる。
+
+```bash
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+```
+
+サインアップ時のレスポンスに確認リンク(`verificationUrl`)がそのまま含まれるので、フロントエンドの「開発用: 確認リンクを開く」ボタンから実際のメール無しで登録を完了できる。
+
+### 本番相当の設定で起動
+
 Maven は不要 — 同梱の Wrapper を使う。
 
 ```bash
@@ -55,6 +67,7 @@ java -jar target/fests-backend-0.0.1-SNAPSHOT.jar
 
 ## 未実装 / 今後の課題
 
-- フロントエンド (`FE_STS/`) は現状 localStorage ベースのモック認証のままで、この API とはまだ接続されていない
+- フロントエンド (`FE_STS/`, `feature/deploy-ready` ブランチ) は接続済み。`VITE_API_BASE_URL` でこのAPIのURLを指定する(本番では実際にデプロイしたバックエンドのURLが必要)
 - リフレッシュトークンは docs では言及されているが未実装 (アクセストークンのみ)
 - レート制限 (`resend-verification` の5分に1回制限など) は未実装
+- 「ユーザー一覧」「ランキング」に表示される自分以外のユーザーはまだモックデータのまま(全ユーザーの一覧・ランキングを返すAPIが未設計)
