@@ -34,6 +34,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
 
     // メール送信基盤が無いため、モックとして一時パスワードをその場で発行する
     setTempPassword(generateTempPassword());
+    setPassword('');
     setStep('password');
   };
 
@@ -65,7 +66,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
             </label>
             <input
               id="login-name"
-              className="login-input"
+              className="text-input"
               type="text"
               placeholder="例）野原 一誠"
               value={name}
@@ -77,7 +78,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
             </label>
             <input
               id="login-email"
-              className="login-input"
+              className="text-input"
               type="email"
               placeholder={`例）taro${ALLOWED_DOMAIN}`}
               value={email}
@@ -102,7 +103,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
             </label>
             <input
               id="login-password"
-              className="login-input"
+              className="text-input"
               type="text"
               inputMode="numeric"
               placeholder="6桁のコード"
@@ -130,7 +131,10 @@ export function Login({ onLoginSuccess }: LoginProps) {
               className="btn btn-secondary login-submit"
               type="button"
               id="back-to-email-btn"
-              onClick={() => setStep('email')}
+              onClick={() => {
+                setStep('email');
+                setError('');
+              }}
             >
               戻る
             </button>

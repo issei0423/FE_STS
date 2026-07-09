@@ -4,6 +4,7 @@ import { Sidebar } from './components/Sidebar';
 import { MainContent } from './components/MainContent';
 import { Login } from './components/Login';
 import { mockUsers } from './mockData';
+import type { User } from './types';
 
 const AUTH_STORAGE_KEY = 'fe-sts:auth';
 
@@ -16,26 +17,42 @@ function readStoredAuth(): StoredAuth | null {
     const raw = localStorage.getItem(AUTH_STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    return typeof parsed?.name === 'string' ? parsed : null;
+    return typeof parsed?.name === 'string' && parsed.name.trim() ? parsed : null;
   } catch {
     return null;
   }
+}
+
+function persistAuth(value: StoredAuth | null) {
+  try {
+    if (value) {
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(value));
+    } else {
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+    }
+  } catch {
+    // localStorage may be unavailable (private browsing, quota exceeded, policy) — continue in-memory only
+  }
+}
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return `${parts[0].charAt(0)}${parts[1].charAt(0)}`;
+  }
+  return name.trim().slice(0, 2);
 }
 
 function App() {
   const [auth, setAuth] = useState<StoredAuth | null>(() => readStoredAuth());
 
   const handleLoginSuccess = (name: string, rememberMe: boolean) => {
-    if (rememberMe) {
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ name }));
-    } else {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
-    }
+    persistAuth(rememberMe ? { name } : null);
     setAuth({ name });
   };
 
   const handleLogout = () => {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
+    persistAuth(null);
     setAuth(null);
   };
 
@@ -43,9 +60,19 @@ function App() {
     return <Login onLoginSuccess={handleLoginSuccess} />;
   }
 
-  // Current user is the first mock user for demo purposes, with the logged-in name applied
-  const users = mockUsers.map((u, i) => (i === 0 ? { ...u, name: auth.name } : u));
-  const currentUser = users[0];
+  // The logged-in person takes the "current user" slot with fresh stats (not
+  // mockUsers[0]'s borrowed name/status/hours). Any mock entry sharing the same
+  // name is dropped so the roster never shows a duplicate.
+  const currentUser: User = {
+    ...mockUsers[0],
+    name: auth.name,
+    initials: getInitials(auth.name),
+    status: 'online',
+    currentSessionMinutes: 0,
+    totalStudyHours: 0,
+    subject: undefined,
+  };
+  const users = [currentUser, ...mockUsers.slice(1).filter((u) => u.name !== auth.name)];
 
   return (
     <div className="app-layout" id="app-layout">

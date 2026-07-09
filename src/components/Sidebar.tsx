@@ -48,7 +48,7 @@ export function Sidebar({ users, currentUser, onLogout }: SidebarProps) {
           <span className="search-icon">🔍</span>
           <input
             id="user-search"
-            className="search-input"
+            className="text-input search-input"
             type="text"
             placeholder="ユーザーを検索..."
             value={searchQuery}
