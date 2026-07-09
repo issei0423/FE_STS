@@ -1,40 +1,32 @@
-# FE_STS 
+# React + TypeScript + Vite
 
-# 基本情報勉強時間リアルタイム共有webサイト
-mader 野原一誠
----
+This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
-## 概要
-以下概要に続く
+Currently, two official plugins are available:
 
-これは基本情報技術者試験を控えている沖縄みらいAI＆IT専門学校２年PC科の為の勉強時間を友達・同級生同士でリアルタイムに勉強時間を共有できるwebサイトである。
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
+## React Compiler
 
-## メリット
-このwebサイトから得れるメリットは以下である。
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-- PC科全体で受験の時のような空気を作れる
-- PC科の生徒の勉強時間を可視化できるようになり不安感を煽ることができ勉強をしてこなかった生徒の重い尻を上げる
-- 他人が勉強していないと勉強できない令和世代のドパガキが安心して勉強できる
-- 他人の勉強累計時間を見れることによる疑問・質問の人物選定ができるようになる
+## Expanding the Oxlint configuration
 
-## 条件
+If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
 
-- サインイン・ログインは"@sankogakuen.jp"で検閲するものとする
-    - gmeilに毎回、一時パスを送付してwebサイトに入力させるものとする
-- アカウントは本名で登録しないとけないものとする
-    - システム化はせずに管理者が検査・検閲を行い上記を守るように周知させる
-    - サインイン時に本名で登録させる旨を伝える
-- 計測はボタンによって開始される
-- 計測はボタン又はサイトが終了された場合に終了される
+```json
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "typescript", "oxc"],
+  "options": {
+    "typeAware": true
+  },
+  "rules": {
+    "react/rules-of-hooks": "error",
+    "react/only-export-components": ["warn", { "allowConstantExport": true }]
+  }
+}
+```
 
-## 現在での懸念点・悩んでること
-
-- clomeのアップデートが行われて画面に表示されていないタブが追跡されなくなった(？)が正常に機能できるか
-- スマホからの利用について（スマホから過去問道場が利用できるがそれに伴い対応するか）
-
-## 環境
-
-言語:React
-IDE:vs code
-その他利用ツール: git
+See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
