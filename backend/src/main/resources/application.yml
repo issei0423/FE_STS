@@ -1,0 +1,53 @@
+spring:
+  application:
+    name: fests-backend
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/fests?useSSL=true&serverTimezone=Asia/Tokyo
+    username: ${DB_USERNAME:fests_user}
+    password: ${DB_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    open-in-view: false
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+
+  mail:
+    host: smtp-relay.brevo.com
+    port: 587
+    username: ${BREVO_SMTP_USER:}
+    password: ${BREVO_SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:}
+    access-token-expire-ms: 3600000     # 1時間
+  mail:
+    from-name: "FE_STS 運営チーム"
+    from-address: ${MAIL_FROM_ADDRESS:noreply@example.com}
+    verify-url-base: ${VERIFY_URL_BASE:http://localhost:5183/verify}
+    token-expire-hours: 24
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5183}
+  upload:
+    dir: ${UPLOAD_DIR:./uploads/icons}
+
+server:
+  port: 8080

@@ -1,0 +1,9 @@
+CREATE TABLE user_icons (
+    id          BIGINT       UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id     BIGINT       UNSIGNED NOT NULL UNIQUE,
+    file_name   VARCHAR(255) NOT NULL,
+    mime_type   VARCHAR(100) NOT NULL,
+    file_path   VARCHAR(500) NOT NULL COMMENT 'VM上の保存パス',
+    uploaded_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_ui_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
