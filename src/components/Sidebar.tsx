@@ -5,7 +5,7 @@ interface SidebarProps {
   users: User[];
   currentUser: User;
   onLogout: () => void;
-  onAvatarChange: (avatarUrl: string | undefined) => void;
+  onAvatarChange: (file: File) => void | Promise<void>;
 }
 
 type SidePageView = 'list' | 'ranking';
@@ -21,9 +21,9 @@ function readImageAsDataUrl(file: File): Promise<string> {
   });
 }
 
-// Downscale to keep the avatar small enough for localStorage (a phone photo
-// can be several MB, which would blow past the storage quota otherwise).
-function resizeAvatar(dataUrl: string, maxSize = AVATAR_MAX_SIZE): Promise<string> {
+// Downscale before uploading (a phone photo can be several MB) and hand back
+// a File so the caller can POST it as multipart/form-data.
+function resizeAvatar(dataUrl: string, maxSize = AVATAR_MAX_SIZE): Promise<File> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
@@ -37,7 +37,17 @@ function resizeAvatar(dataUrl: string, maxSize = AVATAR_MAX_SIZE): Promise<strin
         return;
       }
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL('image/jpeg', 0.85));
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error('failed to encode image'));
+            return;
+          }
+          resolve(new File([blob], 'avatar.jpg', { type: 'image/jpeg' }));
+        },
+        'image/jpeg',
+        0.85
+      );
     };
     img.onerror = () => reject(new Error('failed to decode image'));
     img.src = dataUrl;
@@ -95,9 +105,9 @@ export function Sidebar({ users, currentUser, onLogout, onAvatarChange }: Sideba
     try {
       const rawDataUrl = await readImageAsDataUrl(file);
       const resized = await resizeAvatar(rawDataUrl);
-      onAvatarChange(resized);
+      await onAvatarChange(resized);
     } catch {
-      // Unreadable/undecodable image — leave the current avatar unchanged.
+      // Unreadable/undecodable image, or upload failed — leave the current avatar unchanged.
     }
   };
 

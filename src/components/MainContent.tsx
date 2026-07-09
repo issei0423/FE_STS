@@ -1,23 +1,47 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { User } from '../types';
+import { api, ApiError } from '../api/client';
 
 interface MainContentProps {
   currentUser: User;
+  token: string;
 }
 
-export function MainContent({ currentUser }: MainContentProps) {
+export function MainContent({ currentUser, token }: MainContentProps) {
   const [isRunning, setIsRunning] = useState(false);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [todayTotalSeconds, setTodayTotalSeconds] = useState(0);
+  const [runningStartedAt, setRunningStartedAt] = useState<Date | null>(null);
+  const [completedTotalSec, setCompletedTotalSec] = useState(0);
+  const [liveElapsedSec, setLiveElapsedSec] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
   const intervalRef = useRef<number | null>(null);
 
-  // Timer logic — today's total keeps accumulating across start/stop cycles,
-  // independent of the resettable stopwatch display.
+  // 起動時に本日の状態(計測中かどうか・本日の合計)をサーバーから復元する。
   useEffect(() => {
-    if (isRunning) {
+    api
+      .todaySession(token)
+      .then((res) => {
+        if (res.running && res.startedAt) {
+          const startedAt = new Date(res.startedAt);
+          const elapsedNow = Math.max(0, Math.floor((Date.now() - startedAt.getTime()) / 1000));
+          setRunningStartedAt(startedAt);
+          setIsRunning(true);
+          setCompletedTotalSec(Math.max(0, res.todayTotalSec - elapsedNow));
+          setLiveElapsedSec(elapsedNow);
+        } else {
+          setCompletedTotalSec(res.todayTotalSec);
+        }
+      })
+      .catch(() => {
+        // 開発者ログインなどユーザーが永続化されていない場合は 0 からのローカル表示にフォールバック
+      });
+  }, [token]);
+
+  // 計測中は毎秒、開始時刻からの経過時間を再計算する(ドリフト防止のため setInterval で単純加算しない)。
+  useEffect(() => {
+    if (isRunning && runningStartedAt) {
       intervalRef.current = window.setInterval(() => {
-        setElapsedSeconds(prev => prev + 1);
-        setTodayTotalSeconds(prev => prev + 1);
+        setLiveElapsedSec(Math.max(0, Math.floor((Date.now() - runningStartedAt.getTime()) / 1000)));
       }, 1000);
     } else if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -29,7 +53,7 @@ export function MainContent({ currentUser }: MainContentProps) {
         clearInterval(intervalRef.current);
       }
     };
-  }, [isRunning]);
+  }, [isRunning, runningStartedAt]);
 
   const formatTimer = useCallback((totalSeconds: number): string => {
     const h = Math.floor(totalSeconds / 3600);
@@ -38,16 +62,32 @@ export function MainContent({ currentUser }: MainContentProps) {
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   }, []);
 
-  const handleStartStop = () => {
-    setIsRunning(prev => !prev);
+  const handleStartStop = async () => {
+    if (busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      if (isRunning) {
+        const res = await api.stopSession(token);
+        setIsRunning(false);
+        setRunningStartedAt(null);
+        setLiveElapsedSec(0);
+        setCompletedTotalSec(res.todayTotalSec);
+      } else {
+        const res = await api.startSession(token);
+        setIsRunning(true);
+        setRunningStartedAt(res.startedAt ? new Date(res.startedAt) : new Date());
+        setLiveElapsedSec(0);
+        setCompletedTotalSec(res.todayTotalSec);
+      }
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : '通信に失敗しました');
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const handleReset = () => {
-    setIsRunning(false);
-    setElapsedSeconds(0);
-  };
-
-  const todayTotalHours = (todayTotalSeconds / 3600).toFixed(1);
+  const todayTotalHours = ((completedTotalSec + (isRunning ? liveElapsedSec : 0)) / 3600).toFixed(1);
 
   return (
     <main className="main-content" id="main-content">
@@ -77,7 +117,7 @@ export function MainContent({ currentUser }: MainContentProps) {
             {isRunning ? '⏳ 勉強中...' : '⏱️ 勉強タイマー'}
           </div>
           <div className={`timer-display ${isRunning ? 'is-running' : ''}`} id="timer-display">
-            {formatTimer(elapsedSeconds)}
+            {formatTimer(liveElapsedSec)}
           </div>
           <div className="timer-subject">
             {currentUser.subject
@@ -87,20 +127,17 @@ export function MainContent({ currentUser }: MainContentProps) {
           <div className="timer-today-total" id="timer-today-total">
             本日の合計 <strong>{todayTotalHours}</strong>h
           </div>
+
+          {error && <p className="login-error">{error}</p>}
+
           <div className="timer-actions">
             <button
               className={`btn btn-primary ${isRunning ? 'is-running' : ''}`}
               id="timer-start-btn"
               onClick={handleStartStop}
+              disabled={busy}
             >
               {isRunning ? '⏸ 停止' : '▶ スタート'}
-            </button>
-            <button
-              className="btn btn-secondary"
-              id="timer-reset-btn"
-              onClick={handleReset}
-            >
-              ↺ リセット
             </button>
           </div>
         </div>

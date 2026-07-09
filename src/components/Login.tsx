@@ -1,21 +1,18 @@
 import { useState, type FormEvent } from 'react';
+import { api, ApiError, type ApiUser } from '../api/client';
 
 interface LoginProps {
-  onLogin: (email: string, rememberMe: boolean) => boolean;
-  onSignIn: (lastName: string, firstName: string, email: string, rememberMe: boolean) => void;
-  onDevLogin: () => void;
+  onAuthenticated: (accessToken: string, user: ApiUser, rememberMe: boolean) => void;
+  verifyError?: string;
 }
 
 type Mode = 'login' | 'signin';
 
 const ALLOWED_DOMAIN = '@sankogakuen.jp';
 
-function generateTempPassword(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
-export function Login({ onLogin, onSignIn, onDevLogin }: LoginProps) {
+export function Login({ onAuthenticated, verifyError }: LoginProps) {
   const [mode, setMode] = useState<Mode>('login');
+  const [submitting, setSubmitting] = useState(false);
 
   // ログイン（メールアドレス + パスワードのみ）
   const [loginEmail, setLoginEmail] = useState('');
@@ -23,15 +20,15 @@ export function Login({ onLogin, onSignIn, onDevLogin }: LoginProps) {
   const [loginRememberMe, setLoginRememberMe] = useState(true);
   const [loginError, setLoginError] = useState('');
 
-  // サインイン（苗字・名前・メールアドレス + 一時パスワード）
-  const [step, setStep] = useState<'email' | 'password'>('email');
+  // サインイン（苗字・名前・メールアドレス・パスワード → 確認メール）
   const [lastName, setLastName] = useState('');
   const [firstName, setFirstName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [tempPassword, setTempPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
+  const [signupSent, setSignupSent] = useState(false);
+  const [devVerificationUrl, setDevVerificationUrl] = useState<string | null>(null);
 
   const switchToSignIn = () => {
     setLoginError('');
@@ -40,11 +37,12 @@ export function Login({ onLogin, onSignIn, onDevLogin }: LoginProps) {
 
   const switchToLogin = () => {
     setError('');
-    setStep('email');
+    setSignupSent(false);
+    setDevVerificationUrl(null);
     setMode('login');
   };
 
-  const handleLoginSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleLoginSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoginError('');
 
@@ -57,13 +55,18 @@ export function Login({ onLogin, onSignIn, onDevLogin }: LoginProps) {
       return;
     }
 
-    const success = onLogin(loginEmail.trim(), loginRememberMe);
-    if (!success) {
-      setLoginError('アカウントが見つかりません。「またはサインイン」から登録してください');
+    setSubmitting(true);
+    try {
+      const res = await api.login(loginEmail.trim(), loginPassword);
+      onAuthenticated(res.accessToken, res.user, loginRememberMe);
+    } catch (err) {
+      setLoginError(err instanceof ApiError ? err.message : 'ログインに失敗しました');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleSendCode = (e: FormEvent<HTMLFormElement>) => {
+  const handleSignupSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
 
@@ -75,23 +78,49 @@ export function Login({ onLogin, onSignIn, onDevLogin }: LoginProps) {
       setError(`${ALLOWED_DOMAIN} のメールアドレスのみ利用できます`);
       return;
     }
-
-    // メール送信基盤が無いため、モックとして一時パスワードをその場で発行する
-    setTempPassword(generateTempPassword());
-    setPassword('');
-    setStep('password');
-  };
-
-  const handleVerify = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setError('');
-
-    if (password !== tempPassword) {
-      setError('一時パスワードが正しくありません');
+    if (password.length < 8) {
+      setError('パスワードは8文字以上で入力してください');
       return;
     }
 
-    onSignIn(lastName.trim(), firstName.trim(), email.trim(), rememberMe);
+    setSubmitting(true);
+    try {
+      const res = await api.signup(lastName.trim(), firstName.trim(), email.trim(), password);
+      setSignupSent(true);
+      setDevVerificationUrl(res.verificationUrl);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'サインインに失敗しました');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDevVerify = async () => {
+    if (!devVerificationUrl) return;
+    const token = new URL(devVerificationUrl).searchParams.get('token');
+    if (!token) return;
+
+    setSubmitting(true);
+    try {
+      const res = await api.verify(token);
+      onAuthenticated(res.accessToken, res.user, rememberMe);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : '確認に失敗しました');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDevLogin = async () => {
+    setSubmitting(true);
+    try {
+      const res = await api.devLogin();
+      onAuthenticated(res.accessToken, res.user, false);
+    } catch (err) {
+      setLoginError(err instanceof ApiError ? err.message : '開発者ログインに失敗しました');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -102,6 +131,8 @@ export function Login({ onLogin, onSignIn, onDevLogin }: LoginProps) {
           <span className="login-logo-text">FE_STS</span>
         </div>
         <p className="login-subtitle">基本情報 勉強時間共有</p>
+
+        {verifyError && <p className="login-error">{verifyError}</p>}
 
         {mode === 'login' ? (
           <>
@@ -142,7 +173,12 @@ export function Login({ onLogin, onSignIn, onDevLogin }: LoginProps) {
 
               {loginError && <p className="login-error">{loginError}</p>}
 
-              <button className="btn btn-primary login-submit" type="submit" id="login-submit-btn">
+              <button
+                className="btn btn-primary login-submit"
+                type="submit"
+                id="login-submit-btn"
+                disabled={submitting}
+              >
                 ログイン
               </button>
             </form>
@@ -158,8 +194,8 @@ export function Login({ onLogin, onSignIn, onDevLogin }: LoginProps) {
           </>
         ) : (
           <>
-            {step === 'email' ? (
-              <form className="login-form" onSubmit={handleSendCode}>
+            {!signupSent ? (
+              <form className="login-form" onSubmit={handleSignupSubmit}>
                 <div className="login-name-row">
                   <div className="login-name-field">
                     <label className="login-label" htmlFor="login-last-name">
@@ -202,35 +238,21 @@ export function Login({ onLogin, onSignIn, onDevLogin }: LoginProps) {
                 />
                 <p className="login-hint">{ALLOWED_DOMAIN} のアドレスのみ利用できます</p>
 
-                {error && <p className="login-error">{error}</p>}
-
-                <button className="btn btn-primary login-submit" type="submit" id="send-code-btn">
-                  一時パスワードを送信
-                </button>
-              </form>
-            ) : (
-              <form className="login-form" onSubmit={handleVerify}>
-                <p className="login-hint">{email} 宛に一時パスワードを送信しました</p>
-                {/* デモ用: 実際のメール送信基盤が無いため画面上にも表示する */}
-                <p className="login-mock-code">開発用コード: {tempPassword}</p>
-
-                <label className="login-label" htmlFor="login-password">
-                  一時パスワード
+                <label className="login-label" htmlFor="login-new-password">
+                  パスワード
                 </label>
                 <input
-                  id="login-password"
+                  id="login-new-password"
                   className="text-input"
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="6桁のコード"
+                  type="password"
+                  placeholder="8文字以上"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  autoFocus
                 />
 
-                <label className="login-remember" htmlFor="remember-me-checkbox">
+                <label className="login-remember" htmlFor="signup-remember-me-checkbox">
                   <input
-                    id="remember-me-checkbox"
+                    id="signup-remember-me-checkbox"
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
@@ -240,24 +262,53 @@ export function Login({ onLogin, onSignIn, onDevLogin }: LoginProps) {
 
                 {error && <p className="login-error">{error}</p>}
 
-                <button className="btn btn-primary login-submit" type="submit" id="verify-code-btn">
-                  サインイン
+                <button
+                  className="btn btn-primary login-submit"
+                  type="submit"
+                  id="send-code-btn"
+                  disabled={submitting}
+                >
+                  確認メールを送信
                 </button>
+              </form>
+            ) : (
+              <div className="login-form">
+                <p className="login-hint">
+                  {email} 宛に確認メールを送信しました。メール内のリンクをクリックして登録を完了してください。
+                </p>
+
+                {devVerificationUrl && (
+                  <>
+                    <p className="login-mock-code">
+                      開発用: 実際のメール送信基盤が無い環境のため確認リンクをここに表示しています
+                    </p>
+                    <button
+                      className="btn btn-primary login-submit"
+                      type="button"
+                      id="dev-verify-btn"
+                      onClick={handleDevVerify}
+                      disabled={submitting}
+                    >
+                      開発用: 確認リンクを開く
+                    </button>
+                  </>
+                )}
+
                 <button
                   className="btn btn-secondary login-submit"
                   type="button"
                   id="back-to-email-btn"
                   onClick={() => {
-                    setStep('email');
-                    setError('');
+                    setSignupSent(false);
+                    setDevVerificationUrl(null);
                   }}
                 >
                   戻る
                 </button>
-              </form>
+              </div>
             )}
 
-            {step === 'email' && (
+            {!signupSent && (
               <button
                 className="login-switch-link"
                 type="button"
@@ -274,7 +325,8 @@ export function Login({ onLogin, onSignIn, onDevLogin }: LoginProps) {
           className="dev-login-link"
           type="button"
           id="dev-login-btn"
-          onClick={onDevLogin}
+          onClick={handleDevLogin}
+          disabled={submitting}
         >
           🛠️ 開発者ログイン
         </button>

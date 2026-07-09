@@ -792,6 +792,17 @@
   padding: var(--space-lg);
 }
 
+.app-bootstrapping {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gradient-sidebar);
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
 .login-card {
   width: 100%;
   max-width: 380px;
