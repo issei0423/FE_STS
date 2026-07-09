@@ -6,6 +6,5 @@ export interface User {
   currentSessionMinutes: number;
   totalStudyHours: number;
   subject?: string;
+  avatarUrl?: string;
 }
-
-export type RankingPeriod = 'today' | 'week' | 'total';

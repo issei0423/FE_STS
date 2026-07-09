@@ -1,26 +1,23 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { User, RankingPeriod } from '../types';
+import type { User } from '../types';
 
 interface MainContentProps {
-  users: User[];
   currentUser: User;
 }
 
-export function MainContent({ users, currentUser }: MainContentProps) {
+export function MainContent({ currentUser }: MainContentProps) {
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [rankingPeriod, setRankingPeriod] = useState<RankingPeriod>('today');
+  const [todayTotalSeconds, setTodayTotalSeconds] = useState(0);
   const intervalRef = useRef<number | null>(null);
 
-  const onlineCount = users.filter(u => u.status !== 'offline').length;
-  const studyingCount = users.filter(u => u.status === 'studying').length;
-  const totalHoursToday = users.reduce((sum, u) => sum + u.currentSessionMinutes / 60, 0);
-
-  // Timer logic
+  // Timer logic — today's total keeps accumulating across start/stop cycles,
+  // independent of the resettable stopwatch display.
   useEffect(() => {
     if (isRunning) {
       intervalRef.current = window.setInterval(() => {
         setElapsedSeconds(prev => prev + 1);
+        setTodayTotalSeconds(prev => prev + 1);
       }, 1000);
     } else if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -50,25 +47,12 @@ export function MainContent({ users, currentUser }: MainContentProps) {
     setElapsedSeconds(0);
   };
 
-  // Sort users by total study hours for ranking
-  const rankedUsers = [...users].sort((a, b) => b.totalStudyHours - a.totalStudyHours);
-  const maxHours = rankedUsers[0]?.totalStudyHours ?? 1;
-
-  const getRankingClass = (index: number): string => {
-    if (index === 0) return 'top-1';
-    if (index === 1) return 'top-2';
-    if (index === 2) return 'top-3';
-    return 'other';
-  };
-
-  const periodLabels: Record<RankingPeriod, string> = {
-    today: '今日',
-    week: '今週',
-    total: '累計',
-  };
+  const todayTotalHours = (todayTotalSeconds / 3600).toFixed(1);
 
   return (
     <main className="main-content" id="main-content">
+      <div className={`study-recording-overlay ${isRunning ? 'active' : ''}`} aria-hidden="true" />
+
       {/* Header */}
       <header className="main-header">
         <div className="main-header-left">
@@ -87,25 +71,6 @@ export function MainContent({ users, currentUser }: MainContentProps) {
 
       {/* Body */}
       <div className="main-body">
-        {/* Stats Grid */}
-        <div className="stats-grid fade-in-up">
-          <div className="stat-card" id="stat-online">
-            <div className="stat-card-icon">👥</div>
-            <div className="stat-card-value">{onlineCount}</div>
-            <div className="stat-card-label">オンライン</div>
-          </div>
-          <div className="stat-card" id="stat-studying">
-            <div className="stat-card-icon">📖</div>
-            <div className="stat-card-value">{studyingCount}</div>
-            <div className="stat-card-label">勉強中</div>
-          </div>
-          <div className="stat-card" id="stat-hours">
-            <div className="stat-card-icon">⏱️</div>
-            <div className="stat-card-value">{totalHoursToday.toFixed(1)}</div>
-            <div className="stat-card-label">本日の合計 (時間)</div>
-          </div>
-        </div>
-
         {/* Timer Section */}
         <div className="timer-section fade-in-up" id="timer-section">
           <div className="timer-label">
@@ -118,6 +83,9 @@ export function MainContent({ users, currentUser }: MainContentProps) {
             {currentUser.subject
               ? `科目: ${currentUser.subject}`
               : 'スタートボタンで勉強を開始しましょう'}
+          </div>
+          <div className="timer-today-total" id="timer-today-total">
+            本日の合計 <strong>{todayTotalHours}</strong>h
           </div>
           <div className="timer-actions">
             <button
@@ -134,55 +102,6 @@ export function MainContent({ users, currentUser }: MainContentProps) {
             >
               ↺ リセット
             </button>
-          </div>
-        </div>
-
-        {/* Ranking Section */}
-        <div className="ranking-section fade-in-up" id="ranking-section">
-          <div className="ranking-header">
-            <h2 className="ranking-title">🏆 勉強時間ランキング</h2>
-            <div className="ranking-tabs">
-              {(Object.keys(periodLabels) as RankingPeriod[]).map((period) => (
-                <button
-                  key={period}
-                  className={`ranking-tab ${rankingPeriod === period ? 'active' : ''}`}
-                  onClick={() => setRankingPeriod(period)}
-                  id={`ranking-tab-${period}`}
-                >
-                  {periodLabels[period]}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="ranking-list" id="ranking-list">
-            {rankedUsers.map((user, index) => (
-              <div
-                key={user.id}
-                className="ranking-item"
-                id={`ranking-item-${user.id}`}
-              >
-                <div className={`ranking-position ${getRankingClass(index)}`}>
-                  {index + 1}
-                </div>
-                <div className="ranking-avatar">{user.initials}</div>
-                <div className="ranking-info">
-                  <div className="ranking-name">{user.name}</div>
-                  <div className="ranking-total">
-                    {user.status === 'studying' ? '🟡 勉強中' : '累計時間'}
-                  </div>
-                </div>
-                <div className="ranking-progress">
-                  <div
-                    className="ranking-progress-fill"
-                    style={{ width: `${(user.totalStudyHours / maxHours) * 100}%` }}
-                  />
-                </div>
-                <div className="ranking-hours">
-                  {user.totalStudyHours.toFixed(1)}
-                  <span>h</span>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </div>
