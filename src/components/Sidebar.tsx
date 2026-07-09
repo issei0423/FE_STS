@@ -4,9 +4,10 @@ import type { User } from '../types';
 interface SidebarProps {
   users: User[];
   currentUser: User;
+  onLogout: () => void;
 }
 
-export function Sidebar({ users, currentUser }: SidebarProps) {
+export function Sidebar({ users, currentUser, onLogout }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const onlineCount = users.filter(u => u.status !== 'offline').length;
@@ -105,6 +106,14 @@ export function Sidebar({ users, currentUser }: SidebarProps) {
           </div>
           <button className="sidebar-footer-settings" id="settings-btn" aria-label="設定">
             ⚙️
+          </button>
+          <button
+            className="sidebar-footer-settings"
+            id="logout-btn"
+            aria-label="ログアウト"
+            onClick={onLogout}
+          >
+            🚪
           </button>
         </div>
       </div>

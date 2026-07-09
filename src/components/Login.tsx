@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 
 interface LoginProps {
-  onLoginSuccess: (name: string) => void;
+  onLoginSuccess: (name: string, rememberMe: boolean) => void;
 }
 
 const ALLOWED_DOMAIN = '@sankogakuen.jp';
@@ -16,6 +16,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [tempPassword, setTempPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
 
   const handleSendCode = (e: FormEvent<HTMLFormElement>) => {
@@ -45,7 +46,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
       return;
     }
 
-    onLoginSuccess(name.trim());
+    onLoginSuccess(name.trim(), rememberMe);
   };
 
   return (
@@ -109,6 +110,16 @@ export function Login({ onLoginSuccess }: LoginProps) {
               onChange={(e) => setPassword(e.target.value)}
               autoFocus
             />
+
+            <label className="login-remember" htmlFor="remember-me-checkbox">
+              <input
+                id="remember-me-checkbox"
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+              />
+              このブラウザを記憶して次回からログインを省略する
+            </label>
 
             {error && <p className="login-error">{error}</p>}
 
