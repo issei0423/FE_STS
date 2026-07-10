@@ -2,9 +2,11 @@ package com.fests.controller;
 
 import com.fests.dto.MessageResponse;
 import com.fests.dto.UserDto;
+import com.fests.dto.UserRosterEntry;
 import com.fests.entity.User;
 import com.fests.security.CurrentUserResolver;
 import com.fests.service.UserIconService;
+import com.fests.service.UserRosterService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -13,6 +15,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
@@ -20,12 +24,19 @@ public class UserController {
 
     private final CurrentUserResolver currentUserResolver;
     private final UserIconService userIconService;
+    private final UserRosterService userRosterService;
 
     @GetMapping("/me")
     public ResponseEntity<UserDto> me(Authentication authentication) {
         User user = currentUserResolver.resolve(authentication);
         String iconUrl = "/api/users/" + user.getId() + "/icon";
         return ResponseEntity.ok(UserDto.from(user, user.getIconPath() != null ? iconUrl : null));
+    }
+
+    /** ログイン中の全ユーザーの一覧・ランキング表示用ロースター(オンライン/勉強中/オフラインを含む)。 */
+    @GetMapping
+    public ResponseEntity<List<UserRosterEntry>> listUsers() {
+        return ResponseEntity.ok(userRosterService.listRoster());
     }
 
     @PostMapping(value = "/me/icon", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

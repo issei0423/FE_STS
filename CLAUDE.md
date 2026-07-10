@@ -4,49 +4,72 @@
 起動時に自動で読み込みます。IDE(STS)側のClaudeにも、セッション開始時に
 このファイルを参照するよう伝えてください。
 
-## 重要: 複数セッション連携ルール
+## 前提: 複数のClaude Codeセッションが並行して作業する
 
-このプロジェクトは IDE側のClaude と ターミナル側のClaude Code が
-同じファイルを同時に触る可能性があります。編集の衝突を防ぐため、
-以下を必ず守ってください。
+このプロジェクトは、IDE(STS)側のClaude・ターミナル側のClaude Code・Cowork等、
+複数のセッションが同じリポジトリ・同じファイルを**同時に**触ることがあります。
+意識せず操作すると衝突が起きます。実際に以下が起きています(2026-07-10):
+
+- ターミナル側が「mainはクリーン」と確認した直後、IDE側が同じ機能(ユーザーロースターAPI)をmainに直接コミット・pushしていた
+- ターミナル側・IDE側でほぼ同時に同じ機能(ロースター一覧のフロントエンド接続)を別々に実装しかけていた
+- ターミナル側が不要と判断して削除しようとしたフォルダで、IDE側が起動したままのSpring Boot開発サーバーがファイルをロックしていて削除できなかった
+- ターミナル側・Cowork側がほぼ同時に、それぞれ別設計の「複数セッション連携用CLAUDE.md」を作成してpushしようとし、CLAUDE.md自体でコンフリクトが発生した(このファイルはその統合版)
+
+## ファイル編集の衝突を防ぐ: sync-state.json
 
 ### 作業を始める前に
 
-1. docs/sync-state.json を読み、active_sessions を確認する
-2. 自分がこれから編集しようとしているファイルが、他セッションの target_files に含まれていないか確認する
-3. 含まれていなければ次のステップへ。含まれていれば、そのセッションの status が "idle" に戻るまで待つか、ユーザーに確認する
+1. `docs/sync-state.json` を読み、`active_sessions` を確認する
+2. 自分がこれから編集しようとしているファイルが、他セッションの `target_files` に含まれていないか確認する
+3. 含まれていなければ次のステップへ。含まれていれば、そのセッションの `status` が `"idle"` に戻るまで待つか、ユーザーに確認する
 
 ### 作業を始めるとき
 
-docs/sync-state.json の自分の session_id に対応するエントリを更新する。
+`docs/sync-state.json` の自分の `session_id` に対応するエントリを更新する。
 
-- status を "editing" にする
-- task に今から行う作業内容を書く
-- target_files に実際に編集するファイルのパス一覧を書く
-- started_at に現在時刻(ISO 8601, +09:00)を書く
+- `status` を `"editing"` にする
+- `task` に今から行う作業内容を書く
+- `target_files` に実際に編集するファイルのパス一覧を書く
+- `started_at` に現在時刻(ISO 8601, +09:00)を書く
 
-同時に docs/sync-log.md の末尾に開始ログを追記する(既存の行は書き換えない。追記のみ)。
+同時に `docs/sync-log.md` の末尾に開始ログを追記する(既存の行は書き換えない。追記のみ)。
 
 ### 作業が終わったら
 
-- docs/sync-state.json の自分のエントリを status: "idle"、target_files: []、task: null、started_at: null に戻す
-- docs/sync-log.md に完了ログを追記する
+- `docs/sync-state.json` の自分のエントリを `status: "idle"`、`target_files: []`、`task: null`、`started_at: null` に戻す
+- `docs/sync-log.md` に完了ログを追記する
 
 ### セッションIDについて
 
-- IDE(STS)側のClaudeは session_id: "ide-sts" を使う
-- ターミナル側のClaude Codeは session_id: "terminal-claude-code" を使う
-- このCoworkセッションは session_id: "cowork" を使う
+- IDE(STS)側のClaudeは `session_id: "ide-sts"` を使う
+- ターミナル側のClaude Codeは `session_id: "terminal-claude-code"` を使う
+- Coworkセッションは `session_id: "cowork"` を使う
 
 ### 衝突を検知したら
 
-- 自分の status を "blocked" にする
-- docs/sync-log.md に「なぜ待っているか」を1行で記録する
-- 相手のセッションが idle に戻るまで、該当ファイルの編集は行わない
+- 自分の `status` を `"blocked"` にする
+- `docs/sync-log.md` に「なぜ待っているか」を1行で記録する
+- 相手のセッションが `idle` に戻るまで、該当ファイルの編集は行わない
 - 長時間動かない場合はユーザーに直接確認する
+
+## sync-state.json でカバーしきれないものへの注意
+
+`sync-state.json` はファイル編集の衝突を防ぐ仕組みだが、それ以外にも並行作業で衝突しうるものがある。
+
+- **git状態**: 何か変更する前に `git status`・`git log --oneline -5` を確認し、想定外の変更が無いか見る。「直前に見たときはクリーンだったのに、少し時間を置いて再確認したら変わっていた」場合は、他セッションが並行して触っている可能性が高い。
+- **ローカルプロセス**: 開発サーバー等を起動する前に、同じポートで既に何か動いていないか確認する(例: `Get-NetTCPConnection -LocalPort <port>`)。動いていれば新たに起動せず、既存のものを使う・流用する。
+- **破壊的操作**: ファイル削除・ブランチ削除・force push・プロセス強制終了などを行う前に、対象が本当に自分が作った/開始したものか再確認する。ロックされているファイルやプロセスがあれば、まず何がそれを使っているか調べる。
+- **GitHub issue**: 特定のissueに着手する前は [`claim-issue`](.claude/skills/claim-issue/SKILL.md) スキルを使い、他セッションが既に着手していないか(issueへのコメントで)確認してから着手を宣言する。`sync-state.json`はファイル単位の調整、`claim-issue`はissue単位の調整として使い分ける。
+
+## 役割分担の目安
+
+- IDE側: 実装しながら気づいた課題をissueとして起票する
+- ターミナル側: issueキューを消化し、実装・検証・クローズを行う
+
+これはあくまで目安であり、どちらの側で着手する場合も上記の確認を行う。
 
 ## その他のプロジェクトルール
 
-- 設計ドキュメントは docs/ 配下にMarkdownで作成する(命名は NN_topic_name.md 形式)
-- 機密情報(DBパスワード、SMTPキーなど)はソースやドキュメントに直書きしない。環境変数または .env(gitignore対象)で管理する
-- GitHubへの git push を実行する前には、必ずユーザーに変更内容を提示し、明示的な承認を得てから実行する
+- 設計ドキュメントは `docs/` 配下にMarkdownで作成する(命名は `NN_topic_name.md` 形式)
+- 機密情報(DBパスワード、SMTPキーなど)はソースやドキュメントに直書きしない。環境変数または `.env`(gitignore対象)で管理する
+- GitHubへの `git push` を実行する前には、必ずユーザーに変更内容を提示し、明示的な承認を得てから実行する
