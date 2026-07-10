@@ -3,7 +3,6 @@ import './App.css';
 import { Sidebar } from './components/Sidebar';
 import { MainContent } from './components/MainContent';
 import { Login } from './components/Login';
-import { mockUsers } from './mockData';
 import type { User } from './types';
 import { api, ApiError, type ApiUser } from './api/client';
 
@@ -113,14 +112,12 @@ function App() {
     return <Login onAuthenticated={handleAuthenticated} verifyError={verifyError} />;
   }
 
-  // The logged-in person takes the "current user" slot with fresh stats (not
-  // mockUsers[0]'s borrowed name/status/hours). Any mock entry sharing the same
-  // name is dropped so the roster never shows a duplicate. The default icon is
-  // the surname (苗字) unless a custom avatar image was uploaded, except for the
-  // developer shortcut account which always shows a fixed developer mark.
+  // The default icon is the surname (苗字) unless a custom avatar image was
+  // uploaded, except for the developer shortcut account which always shows a
+  // fixed developer mark.
   const fullName = `${apiUser.lastName} ${apiUser.firstName}`;
   const currentUser: User = {
-    ...mockUsers[0],
+    id: String(apiUser.id),
     name: fullName,
     initials: apiUser.role === 'DEVELOPER' ? DEV_AVATAR_MARK : apiUser.lastName,
     avatarUrl: apiUser.iconUrl ?? undefined,
@@ -129,7 +126,9 @@ function App() {
     totalStudyHours: 0,
     subject: undefined,
   };
-  const users = [currentUser, ...mockUsers.slice(1).filter((u) => u.name !== fullName)];
+  // TODO: 全ユーザーの一覧・ランキングを返すバックエンドAPIが無いため、
+  // 現状は自分だけが表示される。
+  const users = [currentUser];
 
   return (
     <div className="app-layout" id="app-layout">
