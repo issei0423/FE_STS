@@ -1,5 +1,6 @@
 package com.fests.security;
 
+import com.fests.service.UserActivityService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -23,6 +24,7 @@ import java.util.List;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final UserActivityService userActivityService;
 
     @Override
     protected void doFilterInternal(
@@ -44,6 +46,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     claims.getSubject(), null, authorities
                 );
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+
+                Long userId = claims.get("userId", Long.class);
+                userActivityService.touch(userId);
             } catch (JwtException | IllegalArgumentException ignored) {
                 // 不正/期限切れトークン: 認証未設定のまま次のフィルタへ進める(→401)
             }

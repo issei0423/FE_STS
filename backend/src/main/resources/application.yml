@@ -50,6 +50,8 @@ app:
     dir: ${UPLOAD_DIR:./uploads/icons}
   dev:
     expose-verification-link: false
+  presence:
+    online-threshold-minutes: ${ONLINE_THRESHOLD_MINUTES:5}
 
 server:
   port: 8080
