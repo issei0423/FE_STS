@@ -42,6 +42,9 @@ public class User {
     @Column(name = "icon_path")
     private String iconPath;
 
+    @Column(name = "last_seen_at")
+    private LocalDateTime lastSeenAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     @CreationTimestamp
     private LocalDateTime createdAt;
