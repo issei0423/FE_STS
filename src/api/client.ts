@@ -32,6 +32,18 @@ export interface StudySessionResponse {
   todayTotalSec: number;
 }
 
+export type RosterStatus = 'STUDYING' | 'ONLINE' | 'OFFLINE';
+
+export interface RosterEntry {
+  id: number;
+  lastName: string;
+  firstName: string;
+  iconUrl: string | null;
+  status: RosterStatus;
+  currentSessionMinutes: number;
+  totalStudyHours: number;
+}
+
 export class ApiError extends Error {
   code: string;
   status: number;
@@ -107,6 +119,8 @@ export const api = {
   devLogin: () => request<LoginResponse>('/api/auth/dev-login', { method: 'POST' }),
 
   me: (token: string) => request<ApiUser>('/api/users/me', { token }),
+
+  listUsers: (token: string) => request<RosterEntry[]>('/api/users', { token }),
 
   uploadIcon: (token: string, file: File) => {
     const formData = new FormData();
