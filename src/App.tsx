@@ -4,10 +4,17 @@ import { Sidebar } from './components/Sidebar';
 import { MainContent } from './components/MainContent';
 import { Login } from './components/Login';
 import type { User } from './types';
-import { api, ApiError, type ApiUser } from './api/client';
+import { api, ApiError, API_BASE_URL, type ApiUser, type RosterEntry, type RosterStatus } from './api/client';
 
 const TOKEN_STORAGE_KEY = 'fe-sts:token';
 const DEV_AVATAR_MARK = '🛠️';
+const ROSTER_POLL_MS = 15000;
+
+const ROSTER_STATUS_MAP: Record<RosterStatus, User['status']> = {
+  STUDYING: 'studying',
+  ONLINE: 'online',
+  OFFLINE: 'offline',
+};
 
 function readStoredToken(): string | null {
   try {
@@ -36,6 +43,7 @@ function App() {
   const [verifyError, setVerifyError] = useState('');
   const [isStudying, setIsStudying] = useState(false);
   const [studyMinutes, setStudyMinutes] = useState(0);
+  const [roster, setRoster] = useState<RosterEntry[]>([]);
 
   // MainContent がタイマーの実行状態を教えてくれるたびに、サイドページの
   // 自分のステータス(オンライン/勉強中)へ反映する。
@@ -86,6 +94,34 @@ function App() {
       .finally(() => setBootstrapping(false));
   }, []);
 
+  // ログイン中は、他のユーザーの一覧・ランキング(オンライン/勉強中/オフライン)を
+  // 定期的に取得して同級生の様子をほぼリアルタイムに反映する。
+  useEffect(() => {
+    if (!token) {
+      setRoster([]);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchRoster = () => {
+      api
+        .listUsers(token)
+        .then((entries) => {
+          if (!cancelled) setRoster(entries);
+        })
+        .catch(() => {
+          // 開発者ログインなどユーザーが永続化されていない場合は空のまま
+        });
+    };
+
+    fetchRoster();
+    const interval = window.setInterval(fetchRoster, ROSTER_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [token]);
+
   const handleAuthenticated = (accessToken: string, user: ApiUser, remember: boolean) => {
     persistToken(remember ? accessToken : null);
     setToken(accessToken);
@@ -126,9 +162,22 @@ function App() {
     totalStudyHours: 0,
     subject: undefined,
   };
-  // TODO: 全ユーザーの一覧・ランキングを返すバックエンドAPIが無いため、
-  // 現状は自分だけが表示される。
-  const users = [currentUser];
+
+  // 自分自身は上記のローカル状態(即時反映)を優先し、他ユーザーは定期取得した
+  // ロースターから表示する。
+  const otherUsers: User[] = roster
+    .filter((entry) => entry.id !== apiUser.id)
+    .map((entry) => ({
+      id: String(entry.id),
+      name: `${entry.lastName} ${entry.firstName}`,
+      initials: entry.lastName,
+      avatarUrl: entry.iconUrl ? `${API_BASE_URL}${entry.iconUrl}` : undefined,
+      status: ROSTER_STATUS_MAP[entry.status],
+      currentSessionMinutes: entry.currentSessionMinutes,
+      totalStudyHours: entry.totalStudyHours,
+      subject: undefined,
+    }));
+  const users = [currentUser, ...otherUsers];
 
   return (
     <div className="app-layout" id="app-layout">
