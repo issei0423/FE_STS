@@ -141,6 +141,9 @@ export const api = {
   stopSession: (token: string) =>
     request<StudySessionResponse>('/api/study-sessions/stop', { method: 'POST', token }),
 
+  heartbeat: (token: string) =>
+    request<StudySessionResponse>('/api/study-sessions/heartbeat', { method: 'POST', token }),
+
   todaySession: (token: string) =>
     request<StudySessionResponse>('/api/study-sessions/today', { token }),
 };

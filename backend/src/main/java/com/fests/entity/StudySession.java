@@ -36,6 +36,9 @@ public class StudySession {
     @Column(nullable = false)
     private LocalDate date;
 
+    @Column(name = "last_heartbeat_at")
+    private LocalDateTime lastHeartbeatAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     @CreationTimestamp
     private LocalDateTime createdAt;

@@ -29,6 +29,13 @@ public class StudySessionController {
         return ResponseEntity.ok(studySessionService.stop(user));
     }
 
+    /** 計測中にクライアントが定期送信するハートビート(ブラウザを閉じた場合の自動終了検知に使う)。 */
+    @PostMapping("/heartbeat")
+    public ResponseEntity<StudySessionResponse> heartbeat(Authentication authentication) {
+        User user = currentUserResolver.resolve(authentication);
+        return ResponseEntity.ok(studySessionService.heartbeat(user));
+    }
+
     @GetMapping("/today")
     public ResponseEntity<StudySessionResponse> today(Authentication authentication) {
         User user = currentUserResolver.resolve(authentication);

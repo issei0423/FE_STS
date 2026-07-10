@@ -1,11 +1,29 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { User } from '../types';
-import { api, ApiError } from '../api/client';
+import { api, ApiError, API_BASE_URL, type StudySessionResponse } from '../api/client';
 
 interface MainContentProps {
   currentUser: User;
   token: string;
   onStudyingChange: (isStudying: boolean, elapsedMinutes: number) => void;
+}
+
+// docs/07_open_design_decisions.md §1-2 で決定した値
+const HEARTBEAT_INTERVAL_MS = 30000;
+const IDLE_TIMEOUT_MS = 10 * 60 * 1000;
+
+// beforeunload/pagehide/visibilitychange はレスポンスを待てないため、
+// keepalive フラグ付きの fire-and-forget リクエストで代替する。
+function sendKeepalive(path: string, token: string) {
+  try {
+    void fetch(`${API_BASE_URL}${path}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      keepalive: true,
+    });
+  } catch {
+    // ベストエフォートのため失敗は無視
+  }
 }
 
 export function MainContent({ currentUser, token, onStudyingChange }: MainContentProps) {
@@ -16,6 +34,7 @@ export function MainContent({ currentUser, token, onStudyingChange }: MainConten
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const intervalRef = useRef<number | null>(null);
+  const lastActivityRef = useRef<number>(Date.now());
 
   // 起動時に本日の状態(計測中かどうか・本日の合計)をサーバーから復元する。
   useEffect(() => {
@@ -62,6 +81,81 @@ export function MainContent({ currentUser, token, onStudyingChange }: MainConten
     onStudyingChange(isRunning, Math.floor(liveElapsedSec / 60));
   }, [isRunning, liveElapsedSec, onStudyingChange]);
 
+  const stopLocally = useCallback((res: StudySessionResponse) => {
+    setIsRunning(false);
+    setRunningStartedAt(null);
+    setLiveElapsedSec(0);
+    setCompletedTotalSec(res.todayTotalSec);
+  }, []);
+
+  // ユーザー操作(マウス/キーボード/タッチ/スクロール)を検知し、放置検知の基準時刻を更新する。
+  useEffect(() => {
+    const markActive = () => {
+      lastActivityRef.current = Date.now();
+    };
+    const events: Array<keyof WindowEventMap> = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'];
+    events.forEach((evt) => window.addEventListener(evt, markActive, { passive: true }));
+    return () => {
+      events.forEach((evt) => window.removeEventListener(evt, markActive));
+    };
+  }, []);
+
+  // 計測中は30秒ごとにハートビートを送信する。サーバー側で既にタイムアウト等により
+  // セッションが終了していた場合(NO_RUNNING_SESSION)はローカル状態も同期する。
+  // また、10分以上ユーザー操作が無ければ放置とみなし自動停止する。
+  useEffect(() => {
+    if (!isRunning) return;
+
+    const tick = async () => {
+      const idleFor = Date.now() - lastActivityRef.current;
+      if (idleFor >= IDLE_TIMEOUT_MS) {
+        try {
+          const res = await api.stopSession(token);
+          stopLocally(res);
+        } catch {
+          // ベストエフォートのため失敗は無視
+        }
+        return;
+      }
+
+      try {
+        await api.heartbeat(token);
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 400) {
+          setIsRunning(false);
+          setRunningStartedAt(null);
+          setLiveElapsedSec(0);
+        }
+      }
+    };
+
+    const id = window.setInterval(tick, HEARTBEAT_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [isRunning, token, stopLocally]);
+
+  // タブを閉じる/離脱する際はベストエフォートで終了リクエストを送る。
+  // バックグラウンド化(視認不可)した際はハートビートを送り、サーバー側タイムアウトの
+  // 猶予を保つ(タブ切り替え程度で計測を止めてしまわないよう、停止はしない)。
+  useEffect(() => {
+    if (!isRunning) return;
+
+    const handleUnload = () => sendKeepalive('/api/study-sessions/stop', token);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        sendKeepalive('/api/study-sessions/heartbeat', token);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleUnload);
+    window.addEventListener('pagehide', handleUnload);
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      window.removeEventListener('beforeunload', handleUnload);
+      window.removeEventListener('pagehide', handleUnload);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [isRunning, token]);
+
   const formatTimer = useCallback((totalSeconds: number): string => {
     const h = Math.floor(totalSeconds / 3600);
     const m = Math.floor((totalSeconds % 3600) / 60);
@@ -87,10 +181,7 @@ export function MainContent({ currentUser, token, onStudyingChange }: MainConten
     try {
       if (isRunning) {
         const res = await api.stopSession(token);
-        setIsRunning(false);
-        setRunningStartedAt(null);
-        setLiveElapsedSec(0);
-        setCompletedTotalSec(res.todayTotalSec);
+        stopLocally(res);
       } else {
         const res = await api.startSession(token);
         setIsRunning(true);

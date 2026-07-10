@@ -52,6 +52,10 @@ app:
     expose-verification-link: false
   presence:
     online-threshold-minutes: ${ONLINE_THRESHOLD_MINUTES:5}
+  study-session:
+    heartbeat-timeout-seconds: ${HEARTBEAT_TIMEOUT_SECONDS:90}
+    max-duration-hours: ${MAX_SESSION_DURATION_HOURS:8}
+    cleanup-interval-ms: ${SESSION_CLEANUP_INTERVAL_MS:30000}
 
 server:
   port: 8080
