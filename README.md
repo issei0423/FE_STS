@@ -22,20 +22,44 @@ maker: 野原一誠
 ## 条件
 
 - サインイン・ログインは"@sankogakuen.jp"で検証するものとする
-    - Gmailに毎回、一時パスを送付してWebサイトに入力させるものとする
+    - サインアップ時に確認メールを送信し、メール内リンクをクリックすることでアカウントを有効化する（ログインの都度ワンタイムパスワードを送付する方式ではない。詳細は [docs/03_email_verification_flow.md](docs/03_email_verification_flow.md) を参照）
+    - ログイン後はJWT（アクセストークン/リフレッシュトークン）でセッションを維持する
 - アカウントは本名で登録しないといけないものとする
     - システム化はせずに管理者が確認・審査を行い上記を守るように周知させる
     - サインイン時に本名で登録させる旨を伝える
+    - 閲覧範囲は管理者のみとし、卒業後は本名データを削除する方針とする（詳細は [docs/07_open_design_decisions.md](docs/07_open_design_decisions.md) を参照）
 - 計測はボタンによって開始される
-- 計測はボタン又はサイトが終了された場合に終了される
+- 計測はボタン又はサイトが終了された場合に終了される（検知方式の方針は [docs/07_open_design_decisions.md](docs/07_open_design_decisions.md) を参照）
 
 ## 現在での懸念点・悩んでること
 
-- Chromeのアップデートが行われて画面に表示されていないタブが追跡されなくなった(？)が正常に機能できるか
-- スマホからの利用について（スマホから過去問道場が利用できるがそれに伴い対応するか）
+- Chromeのアップデートが行われて画面に表示されていないタブが追跡されなくなった(？)が正常に機能できるか → ハートビート方式による対策方針を [docs/07_open_design_decisions.md](docs/07_open_design_decisions.md) に記載
+- スマホからの利用について（スマホから過去問道場が利用できるがそれに伴い対応するか） → レスポンシブ対応方針を [docs/07_open_design_decisions.md](docs/07_open_design_decisions.md) に記載
 
 ## 環境
 
-- 言語: React
+- 言語: TypeScript / JavaScript（フロントエンド）, Java（バックエンド）
+- フレームワーク: React + Vite（フロントエンド）, Spring Boot（バックエンド）
+- DB: MySQL（本番）, H2（ローカル開発）
 - IDE: VS Code
 - その他利用ツール: git
+
+## セットアップ
+
+### フロントエンド
+
+```bash
+npm install
+npm run dev
+```
+
+`.env.example` を `.env.local` にコピーし、`VITE_API_BASE_URL` にバックエンドのURL（既定: `http://localhost:8080`）を設定する。
+
+### バックエンド
+
+```bash
+cd backend
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+```
+
+`local` プロファイルはH2（インメモリ相当のファイルDB）とログ出力のみのメール送信を使用するため、追加の設定なしに起動できる。本番相当の構成（MySQL / Brevo SMTP）については [docs/04_brevo_smtp_setup.md](docs/04_brevo_smtp_setup.md)・[docs/05_oracle_cloud_setup.md](docs/05_oracle_cloud_setup.md)・[backend/README.md](backend/README.md) を参照。
