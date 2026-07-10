@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "last_updated": "2026-07-10T21:49:00+09:00",
+  "lock_rules": "各セッションは作業開始前に active_sessions を確認すること。編集対象ファイルが他セッションの target_files に含まれる場合は、そのセッションの status が 'idle' に戻るまで着手しない。作業開始時は自分のエントリの status を 'editing' にし、task・target_files・started_at を埋める。作業完了時は status を 'idle'、task を null、target_files を []、started_at を null に戻す。衝突を検知した場合は status を 'blocked' にし、note に理由を書く。sync-state.json を更新したら、必ず docs/sync-log.md にも対応する行を追記すること(追記のみ、既存行は書き換えない)。",
+  "active_sessions": {
+    "ide-sts": {
+      "session_id": "ide-sts",
+      "status": "idle",
+      "task": null,
+      "target_files": [],
+      "started_at": null,
+      "note": null
+    },
+    "terminal-claude-code": {
+      "session_id": "terminal-claude-code",
+      "status": "idle",
+      "task": null,
+      "target_files": [],
+      "started_at": null,
+      "note": null
+    },
+    "cowork": {
+      "session_id": "cowork",
+      "status": "idle",
+      "task": null,
+      "target_files": [],
+      "started_at": null,
+      "note": null
+    }
+  }
+}
