@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import './App.css';
 import { Sidebar } from './components/Sidebar';
 import { MainContent } from './components/MainContent';
@@ -35,6 +35,15 @@ function App() {
   const [apiUser, setApiUser] = useState<ApiUser | null>(null);
   const [bootstrapping, setBootstrapping] = useState(true);
   const [verifyError, setVerifyError] = useState('');
+  const [isStudying, setIsStudying] = useState(false);
+  const [studyMinutes, setStudyMinutes] = useState(0);
+
+  // MainContent がタイマーの実行状態を教えてくれるたびに、サイドページの
+  // 自分のステータス(オンライン/勉強中)へ反映する。
+  const handleStudyingChange = useCallback((studying: boolean, minutes: number) => {
+    setIsStudying(studying);
+    setStudyMinutes(minutes);
+  }, []);
 
   // アプリ起動時の一度だけ: (1) メール内の確認リンク(?token=...)を処理するか、
   // (2) 記憶されたトークンでセッションを復元する。
@@ -115,8 +124,8 @@ function App() {
     name: fullName,
     initials: apiUser.role === 'DEVELOPER' ? DEV_AVATAR_MARK : apiUser.lastName,
     avatarUrl: apiUser.iconUrl ?? undefined,
-    status: 'online',
-    currentSessionMinutes: 0,
+    status: isStudying ? 'studying' : 'online',
+    currentSessionMinutes: isStudying ? studyMinutes : 0,
     totalStudyHours: 0,
     subject: undefined,
   };
@@ -124,7 +133,7 @@ function App() {
 
   return (
     <div className="app-layout" id="app-layout">
-      <MainContent currentUser={currentUser} token={token} />
+      <MainContent currentUser={currentUser} token={token} onStudyingChange={handleStudyingChange} />
       <Sidebar
         users={users}
         currentUser={currentUser}

@@ -186,9 +186,7 @@ export function Sidebar({ users, currentUser, onLogout, onAvatarChange }: Sideba
                 <div className="user-info">
                   <div className="user-name">{user.name}</div>
                   <div className={`user-study-status ${user.status === 'studying' ? 'active' : ''}`}>
-                    {user.status === 'studying' && user.subject && (
-                      <>📖 {user.subject}</>
-                    )}
+                    {user.status === 'studying' && (user.subject ? `📖 ${user.subject}` : '📖 勉強中')}
                     {user.status === 'online' && 'オンライン'}
                     {user.status === 'offline' && 'オフライン'}
                   </div>
@@ -254,7 +252,9 @@ export function Sidebar({ users, currentUser, onLogout, onAvatarChange }: Sideba
           />
           <div className="sidebar-footer-info">
             <div className="sidebar-footer-name">{currentUser.name}</div>
-            <div className="sidebar-footer-status">● オンライン</div>
+            <div className="sidebar-footer-status">
+              {currentUser.status === 'studying' ? '● 勉強中' : '● オンライン'}
+            </div>
           </div>
           <button className="sidebar-footer-settings" id="settings-btn" aria-label="設定">
             ⚙️

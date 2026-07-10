@@ -5,9 +5,10 @@ import { api, ApiError } from '../api/client';
 interface MainContentProps {
   currentUser: User;
   token: string;
+  onStudyingChange: (isStudying: boolean, elapsedMinutes: number) => void;
 }
 
-export function MainContent({ currentUser, token }: MainContentProps) {
+export function MainContent({ currentUser, token, onStudyingChange }: MainContentProps) {
   const [isRunning, setIsRunning] = useState(false);
   const [runningStartedAt, setRunningStartedAt] = useState<Date | null>(null);
   const [completedTotalSec, setCompletedTotalSec] = useState(0);
@@ -55,11 +56,28 @@ export function MainContent({ currentUser, token }: MainContentProps) {
     };
   }, [isRunning, runningStartedAt]);
 
+  // サイドページの自分のステータス(オンライン/勉強中)に反映してもらうため、
+  // 実行状態と経過時間(分)を親コンポーネントへ伝える。
+  useEffect(() => {
+    onStudyingChange(isRunning, Math.floor(liveElapsedSec / 60));
+  }, [isRunning, liveElapsedSec, onStudyingChange]);
+
   const formatTimer = useCallback((totalSeconds: number): string => {
     const h = Math.floor(totalSeconds / 3600);
     const m = Math.floor((totalSeconds % 3600) / 60);
     const s = totalSeconds % 60;
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }, []);
+
+  // 小数点1桁の時間表示だと数分程度の学習が「0.0h」に丸められ、
+  // 累積されていないように見えてしまうため、秒/分/時間で使い分ける。
+  const formatTotalTime = useCallback((totalSeconds: number): string => {
+    if (totalSeconds < 60) return `${totalSeconds}秒`;
+    const totalMinutes = Math.floor(totalSeconds / 60);
+    if (totalMinutes < 60) return `${totalMinutes}分`;
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    return m > 0 ? `${h}時間${m}分` : `${h}時間`;
   }, []);
 
   const handleStartStop = async () => {
@@ -87,7 +105,7 @@ export function MainContent({ currentUser, token }: MainContentProps) {
     }
   };
 
-  const todayTotalHours = ((completedTotalSec + (isRunning ? liveElapsedSec : 0)) / 3600).toFixed(1);
+  const todayTotalDisplay = formatTotalTime(completedTotalSec + (isRunning ? liveElapsedSec : 0));
 
   return (
     <main className="main-content" id="main-content">
@@ -125,7 +143,7 @@ export function MainContent({ currentUser, token }: MainContentProps) {
               : 'スタートボタンで勉強を開始しましょう'}
           </div>
           <div className="timer-today-total" id="timer-today-total">
-            本日の合計 <strong>{todayTotalHours}</strong>h
+            本日の合計 <strong>{todayTotalDisplay}</strong>
           </div>
 
           {error && <p className="login-error">{error}</p>}
