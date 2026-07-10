@@ -1,0 +1,31 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:fests_test;MODE=MySQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+
+  flyway:
+    enabled: false
+
+  mail:
+    host: localhost
+    port: 3025
+    username: test
+    password: test
+
+app:
+  jwt:
+    secret: dGVzdC1zZWNyZXQta2V5LWZvci1qd3Qtc2lnbmluZy1pbi10ZXN0cy0xMjM0NTY=
+  mail:
+    from-address: noreply@test.local
+    verify-url-base: http://localhost:5183/verify
+  cors:
+    allowed-origins: http://localhost:5183
+  upload:
+    dir: ./build/test-uploads
