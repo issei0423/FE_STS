@@ -3,6 +3,7 @@ package com.fests.controller;
 import com.fests.dto.LoginRequest;
 import com.fests.dto.LoginResponse;
 import com.fests.dto.MessageResponse;
+import com.fests.dto.RefreshRequest;
 import com.fests.dto.ResendVerificationRequest;
 import com.fests.dto.SignupRequest;
 import com.fests.dto.SignupResponse;
@@ -49,6 +50,19 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest req) {
         return ResponseEntity.ok(authService.login(req));
+    }
+
+    /** アクセストークンの再発行。リフレッシュトークンはローテーションされ、旧トークンは失効する */
+    @PostMapping("/refresh")
+    public ResponseEntity<LoginResponse> refresh(@Valid @RequestBody RefreshRequest req) {
+        return ResponseEntity.ok(authService.refresh(req.getRefreshToken()));
+    }
+
+    /** ログアウト。提示されたリフレッシュトークンを失効させる */
+    @PostMapping("/logout")
+    public ResponseEntity<MessageResponse> logout(@Valid @RequestBody RefreshRequest req) {
+        authService.logout(req.getRefreshToken());
+        return ResponseEntity.ok(new MessageResponse("ログアウトしました。"));
     }
 
     private String buildDevVerificationUrl(String token) {

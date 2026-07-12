@@ -1,4 +1,4 @@
 package com.fests.dto;
 
-public record LoginResponse(String accessToken, UserDto user) {
+public record LoginResponse(String accessToken, String refreshToken, UserDto user) {
 }

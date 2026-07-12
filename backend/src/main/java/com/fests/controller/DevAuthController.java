@@ -12,12 +12,17 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 開発者専用の瞬間ログイン。本番プロファイルでは登録されない
- * (docs/06 §8: フロントエンドで role === 'DEVELOPER' を判定しアイコンをデベロッパーマークに切り替える)。
+ * 開発者専用の瞬間ログイン。
+ *
+ * セキュリティ上の重要な変更: @Profile("!prod") から @Profile("local") へ変更(オプトイン方式)。
+ * 旧方式ではプロファイル未指定で起動した場合(java -jar app.jar 等)にこのエンドポイントが
+ * 有効化され、誰でも無認証でDEVELOPER権限のJWTを取得できてしまう。
+ * 新方式では local プロファイルを明示した場合のみ有効化される。
+ * (docs/06 §8: フロントエンドで role === 'DEVELOPER' を判定しアイコンをデベロッパーマークに切り替える)
  */
 @RestController
 @RequestMapping("/api/auth")
-@Profile("!prod")
+@Profile({"local", "test"})
 @RequiredArgsConstructor
 public class DevAuthController {
 
@@ -34,6 +39,7 @@ public class DevAuthController {
         devUser.setVerified(true);
 
         String token = jwtUtil.generateAccessToken(devUser);
-        return ResponseEntity.ok(new LoginResponse(token, UserDto.from(devUser, null)));
+        // devユーザーはDBに存在しないためリフレッシュトークンは発行しない(アクセストークンのみ)
+        return ResponseEntity.ok(new LoginResponse(token, null, UserDto.from(devUser, null)));
     }
 }

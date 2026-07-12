@@ -39,6 +39,7 @@ app:
   jwt:
     secret: ${JWT_SECRET:}
     access-token-expire-ms: 3600000     # 1時間
+    refresh-token-expire-days: ${REFRESH_TOKEN_EXPIRE_DAYS:14}   # リフレッシュトークン有効期限(日)
   mail:
     from-name: "FE_STS 運営チーム"
     from-address: ${MAIL_FROM_ADDRESS:noreply@example.com}

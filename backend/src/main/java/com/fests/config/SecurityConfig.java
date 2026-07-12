@@ -1,5 +1,6 @@
 package com.fests.config;
 
+import com.fests.security.AuthRateLimitFilter;
 import com.fests.security.JwtAuthFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -22,6 +23,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
+    private final AuthRateLimitFilter authRateLimitFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -37,6 +39,7 @@ public class SecurityConfig {
                 .requestMatchers("/actuator/health").permitAll()
                 .anyRequest().authenticated()
             )
+            .addFilterBefore(authRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
             .build();
     }

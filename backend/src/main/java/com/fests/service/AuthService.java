@@ -31,6 +31,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final MailService mailService;
     private final JwtUtil jwtUtil;
+    private final RefreshTokenService refreshTokenService;
 
     @Value("${app.mail.token-expire-hours}")
     private int tokenExpireHours;
@@ -104,10 +105,27 @@ public class AuthService {
         return buildLoginResponse(user);
     }
 
+    /**
+     * リフレッシュトークンによるアクセストークンの再発行。
+     * ローテーション方式: 使用済みリフレッシュトークンは失効し、新しいものを返す。
+     */
+    public LoginResponse refresh(String rawRefreshToken) {
+        User user = refreshTokenService.rotate(rawRefreshToken);
+        return buildLoginResponse(user);
+    }
+
+    /** ログアウト: 提示されたリフレッシュトークンを失効させる(冪等) */
+    public void logout(String rawRefreshToken) {
+        refreshTokenService.revoke(rawRefreshToken);
+    }
+
     private LoginResponse buildLoginResponse(User user) {
         String iconUrl = userIconRepository.findByUser(user)
             .map(icon -> "/api/users/" + user.getId() + "/icon")
             .orElse(null);
-        return new LoginResponse(jwtUtil.generateAccessToken(user), UserDto.from(user, iconUrl));
+        return new LoginResponse(
+            jwtUtil.generateAccessToken(user),
+            refreshTokenService.issue(user),
+            UserDto.from(user, iconUrl));
     }
 }

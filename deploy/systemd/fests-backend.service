@@ -1,0 +1,65 @@
+# FE_STS バックエンド systemd ユニット
+# 配置先: /etc/systemd/system/fests-backend.service
+#
+# 前提:
+#   sudo useradd -r -s /sbin/nologin fests          # 専用ユーザー(root実行を避ける)
+#   sudo mkdir -p /opt/fests /opt/fests/uploads
+#   sudo chown -R fests:fests /opt/fests
+#   jar を /opt/fests/fests-backend.jar に配置
+#   環境変数ファイル /opt/fests/fests.env を作成 (下記テンプレート参照, 権限600)
+#
+# 適用手順:
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now fests-backend
+#   sudo systemctl status fests-backend
+#   journalctl -u fests-backend -f          # ログ確認
+
+[Unit]
+Description=FE_STS Backend (Spring Boot)
+After=network.target mysqld.service
+Wants=mysqld.service
+
+[Service]
+Type=simple
+User=fests
+Group=fests
+WorkingDirectory=/opt/fests
+
+# シークレットは環境変数ファイルで注入 (git管理しない・権限600)
+EnvironmentFile=/opt/fests/fests.env
+
+ExecStart=/usr/bin/java -Xms256m -Xmx1024m -jar /opt/fests/fests-backend.jar
+
+# クラッシュ時・OOM時に自動再起動 (可用性の最低ライン)
+Restart=always
+RestartSec=10
+
+# 再起動ループの暴走防止: 5分間に5回失敗したら停止
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+# 基本的なハードニング
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/fests/uploads
+
+[Install]
+WantedBy=multi-user.target
+
+# ---------------------------------------------------------------
+# /opt/fests/fests.env テンプレート (このファイル自体はコピーせず別途作成)
+# 作成後: sudo chmod 600 /opt/fests/fests.env && sudo chown fests:fests /opt/fests/fests.env
+# ---------------------------------------------------------------
+# DB_USERNAME=fests_user
+# DB_PASSWORD=<MySQLで設定した強いパスワード>
+# JWT_SECRET=<openssl rand -base64 64 の出力>
+# REFRESH_TOKEN_EXPIRE_DAYS=14
+# BREVO_SMTP_USER=<Brevoのログイン>
+# BREVO_SMTP_PASSWORD=<BrevoのSMTPキー>
+# MAIL_FROM_ADDRESS=noreply@your-domain.com
+# VERIFY_URL_BASE=https://your-domain.com/verify
+# CORS_ALLOWED_ORIGINS=https://your-domain.com
+# UPLOAD_DIR=/opt/fests/uploads/icons
+# ---------------------------------------------------------------
