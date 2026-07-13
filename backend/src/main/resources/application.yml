@@ -3,7 +3,7 @@ spring:
     name: fests-backend
 
   datasource:
-    url: jdbc:mysql://localhost:3306/fests?useSSL=true&serverTimezone=Asia/Tokyo
+    url: ${DB_URL:jdbc:mysql://localhost:3306/fests?useSSL=true&serverTimezone=Asia/Tokyo}
     username: ${DB_USERNAME:fests_user}
     password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
