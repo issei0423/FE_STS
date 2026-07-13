@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -16,6 +17,12 @@ public interface StudySessionRepository extends JpaRepository<StudySession, Long
     Optional<StudySession> findFirstByUserAndEndedAtIsNullOrderByStartedAtDesc(User user);
 
     List<StudySession> findByEndedAtIsNull();
+
+    @Query(
+        "select s from StudySession s " +
+        "where s.endedAt is null and s.lastHeartbeatAt >= :threshold"
+    )
+    List<StudySession> findActiveSince(LocalDateTime threshold);
 
     @Query(
         "select coalesce(sum(s.durationSec), 0) from StudySession s " +

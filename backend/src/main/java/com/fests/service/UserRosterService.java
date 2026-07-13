@@ -28,17 +28,21 @@ public class UserRosterService {
     @Value("${app.presence.online-threshold-minutes}")
     private int onlineThresholdMinutes;
 
+    @Value("${app.study-session.heartbeat-timeout-seconds}")
+    private int heartbeatTimeoutSeconds;
+
     @Transactional(readOnly = true)
     public List<UserRosterEntry> listRoster() {
         List<User> users = userRepository.findAll();
+        LocalDateTime now = LocalDateTime.now();
 
-        Map<Long, StudySession> runningByUserId = studySessionRepository.findByEndedAtIsNull().stream()
+        LocalDateTime heartbeatDeadline = now.minusSeconds(heartbeatTimeoutSeconds);
+        Map<Long, StudySession> runningByUserId = studySessionRepository.findActiveSince(heartbeatDeadline).stream()
             .collect(Collectors.toMap(s -> s.getUser().getId(), Function.identity(), (a, b) -> a));
 
         Map<Long, Long> totalSecByUserId = studySessionRepository.sumDurationSecGroupByUser().stream()
             .collect(Collectors.toMap(UserTotalSecProjection::getUserId, UserTotalSecProjection::getTotalSec));
 
-        LocalDateTime now = LocalDateTime.now();
         LocalDateTime onlineThreshold = now.minusMinutes(onlineThresholdMinutes);
 
         return users.stream()

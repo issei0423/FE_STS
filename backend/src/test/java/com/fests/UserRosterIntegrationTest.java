@@ -4,8 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fests.dto.LoginResponse;
 import com.fests.dto.SignupRequest;
 import com.fests.entity.EmailVerification;
+import com.fests.entity.StudySession;
 import com.fests.entity.User;
 import com.fests.repository.EmailVerificationRepository;
+import com.fests.repository.StudySessionRepository;
 import com.fests.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +40,9 @@ class UserRosterIntegrationTest {
 
     @Autowired
     private EmailVerificationRepository emailVerificationRepository;
+
+    @Autowired
+    private StudySessionRepository studySessionRepository;
 
     private String registerAndGetBearerToken(String lastName, String firstName, String email) throws Exception {
         SignupRequest signup = new SignupRequest();
@@ -120,6 +125,39 @@ class UserRosterIntegrationTest {
         boolean found = false;
         for (var entry : roster) {
             if (entry.get("lastName").asText().equals("既読")) {
+                assertThat(entry.get("status").asText()).isEqualTo("OFFLINE");
+                found = true;
+            }
+        }
+        assertThat(found).isTrue();
+    }
+
+    @Test
+    void roster_hidesStudyingStatusWhenHeartbeatIsStale() throws Exception {
+        String staleBearer = registerAndGetBearerToken("鮮度切れ", "四郎", "roster-stale-heartbeat@sankogakuen.jp");
+
+        mockMvc.perform(post("/api/study-sessions/start").header("Authorization", staleBearer))
+            .andExpect(status().isOk());
+
+        User user = userRepository.findByEmail("roster-stale-heartbeat@sankogakuen.jp").orElseThrow();
+        StudySession session = studySessionRepository.findFirstByUserAndEndedAtIsNullOrderByStartedAtDesc(user)
+            .orElseThrow();
+        // heartbeat-timeout-seconds(既定90秒)を超えて途絶えた状態を再現する。
+        session.setLastHeartbeatAt(LocalDateTime.now().minusSeconds(200));
+        studySessionRepository.save(session);
+        user.setLastSeenAt(LocalDateTime.now().minusMinutes(30));
+        userRepository.save(user);
+
+        String viewerBearer = registerAndGetBearerToken("閲覧2", "花子", "roster-stale-viewer@sankogakuen.jp");
+
+        String body = mockMvc.perform(get("/api/users").header("Authorization", viewerBearer))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+
+        var roster = objectMapper.readTree(body);
+        boolean found = false;
+        for (var entry : roster) {
+            if (entry.get("lastName").asText().equals("鮮度切れ")) {
                 assertThat(entry.get("status").asText()).isEqualTo("OFFLINE");
                 found = true;
             }
