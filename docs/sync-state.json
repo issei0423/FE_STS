@@ -17,7 +17,7 @@
       "task": null,
       "target_files": [],
       "started_at": null,
-      "note": "issue #12対応完了(テスト追加・mvn test 23件パス)。次はissue #17に着手予定。"
+      "note": "issue #12,13,14,15,16,17,18,19,20,21を全件解決・クローズ(2026-07-13)。フロントのリフレッシュトークン未使用問題を新規issue #22として起票。未push分がローカルmainに多数あり(commit a2d0e39まで)。"
     },
     "cowork": {
       "session_id": "cowork",
