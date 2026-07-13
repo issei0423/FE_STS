@@ -163,4 +163,14 @@ class AuthFlowIntegrationTest {
             .andExpect(jsonPath("$.user.firstName").value("-"))
             .andExpect(jsonPath("$.user.role").value("DEVELOPER"));
     }
+
+    @Test
+    void actuatorHealth_isPubliclyReachable() throws Exception {
+        // コールドスタート検知(issue #20)・Renderのヘルスチェックが依存するエンドポイント。
+        // SecurityConfigのpermitAllだけでなく、actuator自体が依存関係として
+        // 存在すること(=エンドポイントが実在すること)も合わせて回帰テストする。
+        mockMvc.perform(get("/actuator/health"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("UP"));
+    }
 }

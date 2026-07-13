@@ -58,5 +58,13 @@ app:
     max-duration-hours: ${MAX_SESSION_DURATION_HOURS:8}
     cleanup-interval-ms: ${SESSION_CLEANUP_INTERVAL_MS:30000}
 
+management:
+  health:
+    # SMTP(Brevo)への疎通確認を/actuator/healthの判定に含めない。
+    # 外部メールサービスの一時的な疎通不良でRenderのヘルスチェック・
+    # コールドスタート検知(issue #20)が誤ってDOWN扱いになるのを防ぐ。
+    mail:
+      enabled: false
+
 server:
   port: 8080
