@@ -17,7 +17,7 @@
       "task": null,
       "target_files": [],
       "started_at": null,
-      "note": null
+      "note": "issue #12対応完了(テスト追加・mvn test 23件パス)。次はissue #17に着手予定。"
     },
     "cowork": {
       "session_id": "cowork",
