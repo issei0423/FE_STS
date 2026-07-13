@@ -37,7 +37,7 @@ spring:
 
 app:
   jwt:
-    secret: ${JWT_SECRET:}
+    secret: ${JWT_SECRET}
     access-token-expire-ms: 3600000     # 1時間
     refresh-token-expire-days: ${REFRESH_TOKEN_EXPIRE_DAYS:14}   # リフレッシュトークン有効期限(日)
   mail:
