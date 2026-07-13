@@ -39,7 +39,6 @@ Maven は不要 — 同梱の Wrapper を使う。
 | `MAIL_FROM_ADDRESS` | 確認メールの送信元アドレス |
 | `VERIFY_URL_BASE` | フロントエンドの確認ページURL (例: `https://your-domain.com/verify`) |
 | `CORS_ALLOWED_ORIGINS` | フロントエンドのオリジン (例: `https://your-domain.com`) |
-| `UPLOAD_DIR` | アイコン画像の保存先ディレクトリ (未設定時は `./uploads/icons`) |
 
 MySQL を用意していない場合は、`docs/05_oracle_cloud_setup.md` の手順 4 (データベース作成) をローカルの MySQL にも適用すれば動く。
 

@@ -27,5 +27,3 @@ app:
     verify-url-base: http://localhost:5183/verify
   cors:
     allowed-origins: http://localhost:5183
-  upload:
-    dir: ./build/test-uploads

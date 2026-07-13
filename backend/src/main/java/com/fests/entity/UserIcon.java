@@ -29,8 +29,9 @@ public class UserIcon {
     @Column(name = "mime_type", nullable = false, length = 100)
     private String mimeType;
 
-    @Column(name = "file_path", nullable = false, length = 500)
-    private String filePath;
+    @Lob
+    @Column(name = "image_data", nullable = false, columnDefinition = "LONGBLOB")
+    private byte[] imageData;
 
     @Column(name = "uploaded_at", nullable = false, updatable = false)
     @CreationTimestamp

@@ -47,8 +47,6 @@ app:
     token-expire-hours: 24
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5183}
-  upload:
-    dir: ${UPLOAD_DIR:./uploads/icons}
   dev:
     expose-verification-link: false
   presence:

@@ -23,7 +23,5 @@ app:
     verify-url-base: http://localhost:5183/verify
   cors:
     allowed-origins: http://localhost:5183,http://127.0.0.1:5183
-  upload:
-    dir: ./data/uploads/icons
   dev:
     expose-verification-link: true

@@ -1,6 +1,6 @@
 CREATE TABLE refresh_tokens (
-    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
-    user_id     BIGINT       NOT NULL,
+    id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id     BIGINT UNSIGNED NOT NULL,
     token_hash  CHAR(64)     NOT NULL,
     expires_at  DATETIME     NOT NULL,
     revoked_at  DATETIME     NULL,
