@@ -24,3 +24,4 @@
 - [2026-07-13T09:30:00+09:00] [terminal-claude-code] [開始] issue #12,13,14,15,16,17,18,19,20,21 全件に着手宣言コメントを投稿し、順次対応を開始。まず#12(DevAuthController fail-open修正の検証・テスト追加)から着手。
 - [2026-07-13T09:40:00+09:00] [terminal-claude-code] [完了] issue #12: DevAuthControllerProfileTest.javaを追加し、prod/プロファイル未指定でBean非登録、local/testで登録されることを回帰テストで担保。mvn test 23件全パス。commit・issue closeへ進む。
 - [2026-07-13T09:55:00+09:00] [terminal-claude-code] [完了] issue #17: application.ymlの`app.jwt.secret`デフォルト値(空文字)を削除し`${JWT_SECRET}`必須化。JwtUtilに@PostConstruct検証を追加(Base64デコード後32バイト未満・不正Base64ならIllegalStateExceptionで起動失敗)。JwtUtilTest.javaで未設定/短すぎる/不正Base64/正常系の4パターンを回帰テスト化。mvn test 27件全パス。
+- [2026-07-13T10:00:00+09:00] [terminal-claude-code] [完了] issue #14: commit 6df075aでリフレッシュトークンが実装済みのため、README.mdの既存記述(アクセストークン/リフレッシュトークン)自体は実装と一致していることを確認。ローテーション・盗難検知の挙動を1行追記して実装との対応をより明確化。コード変更なし。
