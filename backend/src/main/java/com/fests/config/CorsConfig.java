@@ -25,6 +25,9 @@ public class CorsConfig {
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", config);
+        // コールドスタート検知(issue #20)がフロントから直接pingするため、
+        // /actuator/healthも同一オリジン設定でCORSを許可する。
+        source.registerCorsConfiguration("/actuator/health", config);
         return source;
     }
 }

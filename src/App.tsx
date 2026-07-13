@@ -3,6 +3,8 @@ import './App.css';
 import { Sidebar } from './components/Sidebar';
 import { MainContent } from './components/MainContent';
 import { Login } from './components/Login';
+import { ServerWakeupOverlay } from './components/ServerWakeupOverlay';
+import { useServerWakeup } from './hooks/useServerWakeup';
 import type { User } from './types';
 import { api, ApiError, API_BASE_URL, type ApiUser, type RosterEntry, type RosterStatus } from './api/client';
 
@@ -37,6 +39,7 @@ function persistToken(token: string | null) {
 }
 
 function App() {
+  const { status: wakeupStatus, elapsedSeconds } = useServerWakeup();
   const [token, setToken] = useState<string | null>(null);
   const [apiUser, setApiUser] = useState<ApiUser | null>(null);
   const [bootstrapping, setBootstrapping] = useState(true);
@@ -139,6 +142,10 @@ function App() {
     await api.uploadIcon(token, file);
     setApiUser({ ...apiUser, iconUrl: `${api.iconUrl(apiUser.id)}?t=${Date.now()}` });
   };
+
+  if (wakeupStatus === 'waking') {
+    return <ServerWakeupOverlay elapsedSeconds={elapsedSeconds} />;
+  }
 
   if (bootstrapping) {
     return <div className="app-bootstrapping">読み込み中…</div>;
