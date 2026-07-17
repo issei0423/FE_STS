@@ -1,6 +1,8 @@
 # 本番デプロイ手順・環境変数一覧（issue #19対応）
 
-**対象構成:** Render Free（バックエンド）/ Cloudflare Pages（フロントエンド）/ TiDB Cloud Serverless（DB）/ Brevo（メール）
+**対象構成:** Render Free（バックエンド）/ Cloudflare Workers 静的アセット（フロントエンド）/ TiDB Cloud Serverless（DB）/ Brevo（メール）
+
+> 📝 2026-07-14 (commit `774cb55`) にフロントは Cloudflare **Pages** から Cloudflare **Workers**（`wrangler.jsonc` + 静的アセット）へ移行しました。フロントのオリジンは `https://fe-sts.<アカウント名>.workers.dev` になります。Pages時代に設定した `CORS_ALLOWED_ORIGINS`・`VERIFY_URL_BASE` は**必ずWorkersの実URLに更新**してください（プレースホルダや旧URLのままだと、バックエンドは正常起動していてもフロントからの通信が全て403になり「起動しない」ように見えます。詳細は `docs/09_render_startup_investigation.md`）。
 
 > ⚠️ `docs/FE_STS_launch_checklist.md`（2026-07-11作成）は Oracle Cloud VM + Nginx + systemd + Let's Encrypt を前提とした別案のチェックリストです。本ドキュメントとはインフラ前提が異なります。issue #17-#21（DEPLOY-01〜06）は本ドキュメントの構成（Render/Cloudflare Pages/TiDB Cloud/Brevo）を前提に対応しました。どちらの構成を採用するかは未確定のため、`FE_STS_launch_checklist.md` は削除せず残していますが、実際にデプロイする際はどちらか一方の構成に決定してください（両方を並行運用する必然性は薄く、Oracle VM側の `deploy/nginx`・`deploy/systemd` は不採用の場合は撤去を検討してください）。
 
@@ -18,22 +20,26 @@
 | `BREVO_SMTP_USER` | Render | (Brevoダッシュボードの値) | |
 | `BREVO_SMTP_PASSWORD` | Render | (秘匿、Brevo SMTPキー) | |
 | `MAIL_FROM_ADDRESS` | Render | `noreply@<本番ドメイン>` | Brevoで送信元検証済みのアドレスであること(§3参照) |
-| `VERIFY_URL_BASE` | Render | `https://<本番フロントURL>/verify` | 本番フロントURL + `/verify`。メール内確認リンクの生成に使用 |
-| `CORS_ALLOWED_ORIGINS` | Render | `https://<本番フロントURL>` | 本番フロントのオリジン。複数指定時はカンマ区切り |
+| `VERIFY_URL_BASE` | Render | `https://fe-sts.<アカウント名>.workers.dev/verify` | 本番フロントURL + `/verify`。メール内確認リンクの生成に使用。**`<...>`部分は必ず実URLに置き換えること** |
+| `CORS_ALLOWED_ORIGINS` | Render | `https://fe-sts.<アカウント名>.workers.dev` | 本番フロントのオリジン。**「スキーム+ホスト」のみで末尾スラッシュ・パス禁止**(完全一致比較)。複数指定時はカンマ区切り。**例をそのまま貼らず必ず実URLに置き換えること**(2026-07-17に `https://example.com` のまま設定されていたのが「起動しない」症状の原因だった) |
 
 上記以外(`REFRESH_TOKEN_EXPIRE_DAYS`、`HEARTBEAT_TIMEOUT_SECONDS`等)は`application.yml`にデフォルト値があるため、変更が必要な場合のみ設定すれば良い。
 
-## 2. Cloudflare Pages（フロントエンド）環境変数
+## 2. Cloudflare Workers（フロントエンド）環境変数とデプロイ
 
 | 変数名 | 設定先 | 例 | 備考 |
 |---|---|---|---|
-| `VITE_API_BASE_URL` | Cloudflare Pages（ビルド環境変数） | `https://<Renderのバックエンドドメイン>` | **ビルド時埋め込み**(Viteの仕様上、実行時ではなくビルド時に埋め込まれる)。値を変更した場合は再ビルドが必要 |
+| `VITE_API_BASE_URL` | **ビルドを実行するシェル**（ローカルビルドの場合）またはCIのビルド環境変数 | `https://fests-backend.onrender.com` | **ビルド時埋め込み**(Viteの仕様上、実行時ではなくビルド時に埋め込まれる)。未設定だと`http://localhost:8080`にフォールバックし、本番ページからはmixed contentで全リクエストが失敗する。値を変更した場合は再ビルド+再デプロイが必要 |
 
-Cloudflare Pagesのビルド設定:
+Cloudflare Workersのデプロイ手順（`wrangler.jsonc` は設定済み。SPA直リンク404対策は `not_found_handling: single-page-application` で対応済みのため `_redirects` は不要）:
 
-- ビルドコマンド: `npm run build`
-- 出力ディレクトリ: `dist`
-- SPA直リンク404対策: `public/_redirects` に `/* /index.html 200` を追加する
+```powershell
+$env:VITE_API_BASE_URL = "https://fests-backend.onrender.com"
+npm run build
+npx wrangler deploy
+```
+
+デプロイ後に表示される `https://fe-sts.<アカウント名>.workers.dev` が本番フロントURL。この値をRender側の `CORS_ALLOWED_ORIGINS`・`VERIFY_URL_BASE`（§1）に設定する。
 
 ## 3. Brevo（メール送信元）設定
 

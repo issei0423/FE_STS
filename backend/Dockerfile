@@ -21,4 +21,6 @@ RUN chown -R fests:fests /app
 USER fests
 
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Render Free(512MB / 0.1 CPU)向け: デフォルトの最大ヒープ(RAMの25%=128MB)では
+# 起動中のGC負荷が高いためヒープ上限を広げ、C2コンパイルを止めて起動を速くする
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-XX:TieredStopAtLevel=1", "-jar", "app.jar"]

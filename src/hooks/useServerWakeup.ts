@@ -16,7 +16,7 @@ async function pingHealth(signal: AbortSignal): Promise<boolean> {
 }
 
 /**
- * Renderの無料プランはスリープ復帰に最大1分程度かかる。/actuator/healthへの
+ * Renderの無料プランはスリープ復帰に数分(実測2〜5分)かかる。/actuator/healthへの
  * 初回pingがタイムアウト・失敗した場合は起動待ちとみなし、成功するまで
  * ポーリングする(起動済みの通常アクセスでは何も表示しない)。
  */
