@@ -1,11 +1,11 @@
 package com.fests.dto;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 public record StudySessionResponse(
     Long id,
-    LocalDateTime startedAt,
-    LocalDateTime endedAt,
+    OffsetDateTime startedAt,
+    OffsetDateTime endedAt,
     Integer durationSec,
     boolean running,
     long todayTotalSec

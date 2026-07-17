@@ -321,15 +321,18 @@ export function Login({ onAuthenticated, verifyError }: LoginProps) {
           </>
         )}
 
-        <button
-          className="dev-login-link"
-          type="button"
-          id="dev-login-btn"
-          onClick={handleDevLogin}
-          disabled={submitting}
-        >
-          🛠️ 開発者ログイン
-        </button>
+        {/* バックエンド側もlocal/testプロファイル限定のため、本番ビルドでは表示しない */}
+        {import.meta.env.DEV && (
+          <button
+            className="dev-login-link"
+            type="button"
+            id="dev-login-btn"
+            onClick={handleDevLogin}
+            disabled={submitting}
+          >
+            🛠️ 開発者ログイン
+          </button>
+        )}
       </div>
     </div>
   );

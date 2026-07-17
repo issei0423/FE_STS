@@ -14,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -125,11 +127,21 @@ public class StudySessionService {
 
         return new StudySessionResponse(
             session.getId(),
-            session.getStartedAt(),
-            session.getEndedAt(),
+            toOffset(session.getStartedAt()),
+            toOffset(session.getEndedAt()),
             session.getDurationSec(),
             running,
             liveTotal
         );
+    }
+
+    /**
+     * DBにはサーバーのローカル壁時計(LocalDateTime)で保存しているため、レスポンスでは
+     * サーバーのタイムゾーンオフセットを付与して返す。オフセットなしのISO文字列は
+     * ブラウザ側でローカル時刻として解釈され、サーバー(UTC)とクライアント(JST等)の
+     * タイムゾーンが異なる環境で経過時間がずれる。
+     */
+    private OffsetDateTime toOffset(LocalDateTime dateTime) {
+        return dateTime == null ? null : dateTime.atZone(ZoneId.systemDefault()).toOffsetDateTime();
     }
 }
