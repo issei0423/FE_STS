@@ -18,18 +18,6 @@ spring:
     enabled: true
     baseline-on-migrate: true
 
-  mail:
-    host: smtp-relay.brevo.com
-    port: 587
-    username: ${BREVO_SMTP_USER:}
-    password: ${BREVO_SMTP_PASSWORD:}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
-
   servlet:
     multipart:
       max-file-size: 5MB
@@ -45,6 +33,9 @@ app:
     from-address: ${MAIL_FROM_ADDRESS:noreply@example.com}
     verify-url-base: ${VERIFY_URL_BASE:http://localhost:5183/verify}
     token-expire-hours: 24
+    # RenderがSMTPポートをブロックするためBrevoはHTTP APIで利用する(docs/04)
+    brevo-api-base: ${BREVO_API_BASE:https://api.brevo.com}
+    brevo-api-key: ${BREVO_API_KEY:}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5183}
   dev:
@@ -55,14 +46,6 @@ app:
     heartbeat-timeout-seconds: ${HEARTBEAT_TIMEOUT_SECONDS:90}
     max-duration-hours: ${MAX_SESSION_DURATION_HOURS:8}
     cleanup-interval-ms: ${SESSION_CLEANUP_INTERVAL_MS:30000}
-
-management:
-  health:
-    # SMTP(Brevo)への疎通確認を/actuator/healthの判定に含めない。
-    # 外部メールサービスの一時的な疎通不良でRenderのヘルスチェック・
-    # コールドスタート検知(issue #20)が誤ってDOWN扱いになるのを防ぐ。
-    mail:
-      enabled: false
 
 server:
   port: 8080

@@ -35,7 +35,7 @@ Maven は不要 — 同梱の Wrapper を使う。
 |------|------|
 | `DB_USERNAME` / `DB_PASSWORD` | MySQL 接続情報 (`docs/05` でセットアップした `fests_user`) |
 | `JWT_SECRET` | Base64エンコードされた256bit以上のランダム文字列 |
-| `BREVO_SMTP_USER` / `BREVO_SMTP_PASSWORD` | `docs/04` で取得したBrevoのSMTP認証情報 |
+| `BREVO_API_KEY` | `docs/04` で取得したBrevoのAPIキー (v3)。SMTPはRender無料プランでポートブロックされるためHTTP APIで送信する |
 | `MAIL_FROM_ADDRESS` | 確認メールの送信元アドレス |
 | `VERIFY_URL_BASE` | フロントエンドの確認ページURL (例: `https://your-domain.com/verify`) |
 | `CORS_ALLOWED_ORIGINS` | フロントエンドのオリジン (例: `https://your-domain.com`) |

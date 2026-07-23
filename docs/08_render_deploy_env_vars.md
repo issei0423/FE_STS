@@ -17,8 +17,7 @@
 | `DB_USERNAME` | Render | `xxxxxxxx.root` | TiDB Cloud発行のユーザー名 |
 | `DB_PASSWORD` | Render | (秘匿) | TiDB Cloud発行のパスワード |
 | `JWT_SECRET` | Render | (秘匿、32バイト以上のBase64) | 生成例: `openssl rand -base64 48`。未設定・短すぎる場合は起動時にfail-fastする(issue #17) |
-| `BREVO_SMTP_USER` | Render | (Brevoダッシュボードの値) | |
-| `BREVO_SMTP_PASSWORD` | Render | (秘匿、Brevo SMTPキー) | |
+| `BREVO_API_KEY` | Render | (秘匿、`xkeysib-`で始まるBrevo APIキー) | **2026-07-23にSMTP方式から変更**。Render無料プランはoutbound SMTP(25/465/587)をブロックするためHTTP APIで送信する(docs/04参照)。旧`BREVO_SMTP_USER`/`BREVO_SMTP_PASSWORD`は削除してよい |
 | `MAIL_FROM_ADDRESS` | Render | `noreply@<本番ドメイン>` | Brevoで送信元検証済みのアドレスであること(§3参照) |
 | `VERIFY_URL_BASE` | Render | `https://fe-sts.<アカウント名>.workers.dev/verify` | 本番フロントURL + `/verify`。メール内確認リンクの生成に使用。**`<...>`部分は必ず実URLに置き換えること** |
 | `CORS_ALLOWED_ORIGINS` | Render | `https://fe-sts.<アカウント名>.workers.dev` | 本番フロントのオリジン。**「スキーム+ホスト」のみで末尾スラッシュ・パス禁止**(完全一致比較)。複数指定時はカンマ区切り。**例をそのまま貼らず必ず実URLに置き換えること**(2026-07-17に `https://example.com` のまま設定されていたのが「起動しない」症状の原因だった) |
