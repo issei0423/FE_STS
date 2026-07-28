@@ -7,6 +7,7 @@ import com.fests.repository.UserIconRepository;
 import com.fests.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,6 +23,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UserIconService {
 
+    private static final byte[] PNG_SIGNATURE = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A};
+    private static final byte[] JPEG_SIGNATURE = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF};
+    private static final byte[] RIFF_SIGNATURE = {'R', 'I', 'F', 'F'};
+
     private final UserIconRepository userIconRepository;
     private final UserRepository userRepository;
 
@@ -32,18 +37,18 @@ public class UserIconService {
         if (file.isEmpty()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "EMPTY_FILE", "画像ファイルを選択してください");
         }
-        String contentType = file.getContentType();
-        if (contentType == null || !contentType.startsWith("image/")) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_FILE_TYPE", "画像ファイルのみアップロードできます");
-        }
 
         try {
             byte[] data = file.getBytes();
+            // Content-Type ヘッダは送信側の自己申告なので信用しない。中身(マジックバイト)から
+            // 判定し、許可した形式でなければ弾く。スクリプト入りSVGを image/svg+xml として
+            // 保存・配信できてしまう問題への対処(issue #31)
+            String mimeType = detectAllowedMimeType(data);
 
             UserIcon icon = userIconRepository.findByUser(user).orElseGet(UserIcon::new);
             icon.setUser(user);
             icon.setFileName(file.getOriginalFilename());
-            icon.setMimeType(contentType);
+            icon.setMimeType(mimeType);
             icon.setImageData(data);
             userIconRepository.save(icon);
 
@@ -56,6 +61,43 @@ public class UserIconService {
         } catch (IOException e) {
             throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "UPLOAD_FAILED", "アップロードに失敗しました");
         }
+    }
+
+    /**
+     * 画像バイナリの先頭から形式を判定し、許可した形式の MIME タイプを返す。
+     * 判定できない・許可外の場合は 400 で弾く。
+     */
+    private static String detectAllowedMimeType(byte[] data) {
+        if (startsWith(data, PNG_SIGNATURE)) {
+            return MediaType.IMAGE_PNG_VALUE;
+        }
+        if (startsWith(data, JPEG_SIGNATURE)) {
+            return MediaType.IMAGE_JPEG_VALUE;
+        }
+        if (isWebp(data)) {
+            return "image/webp";
+        }
+        throw new ApiException(
+            HttpStatus.BAD_REQUEST, "INVALID_FILE_TYPE", "PNG・JPEG・WebP形式の画像のみアップロードできます");
+    }
+
+    private static boolean startsWith(byte[] data, byte[] signature) {
+        if (data.length < signature.length) {
+            return false;
+        }
+        for (int i = 0; i < signature.length; i++) {
+            if (data[i] != signature[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** WebPは "RIFF" + 4バイトのサイズ + "WEBP" という構造になっている。 */
+    private static boolean isWebp(byte[] data) {
+        return data.length >= 12
+            && startsWith(data, RIFF_SIGNATURE)
+            && data[8] == 'W' && data[9] == 'E' && data[10] == 'B' && data[11] == 'P';
     }
 
     @Transactional(readOnly = true)

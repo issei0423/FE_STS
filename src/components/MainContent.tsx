@@ -12,7 +12,7 @@ interface MainContentProps {
 const HEARTBEAT_INTERVAL_MS = 30000;
 const IDLE_TIMEOUT_MS = 10 * 60 * 1000;
 
-// beforeunload/pagehide/visibilitychange はレスポンスを待てないため、
+// pagehide/visibilitychange はレスポンスを待てないため、
 // keepalive フラグ付きの fire-and-forget リクエストで代替する。
 function sendKeepalive(path: string, token: string) {
   try {
@@ -107,7 +107,11 @@ export function MainContent({ currentUser, token, onStudyingChange }: MainConten
     if (!isRunning) return;
 
     const tick = async () => {
-      const idleFor = Date.now() - lastActivityRef.current;
+      // 非表示中はそもそもユーザー操作イベントが来ないため、放置判定の対象外にする。
+      // (画面を伏せて参考書を読むような使い方で自動停止させないため。issue #29)
+      const idleFor = document.visibilityState === 'hidden'
+        ? 0
+        : Date.now() - lastActivityRef.current;
       if (idleFor >= IDLE_TIMEOUT_MS) {
         try {
           const res = await api.stopSession(token);
@@ -133,25 +137,29 @@ export function MainContent({ currentUser, token, onStudyingChange }: MainConten
     return () => clearInterval(id);
   }, [isRunning, token, stopLocally]);
 
-  // タブを閉じる/離脱する際はベストエフォートで終了リクエストを送る。
-  // バックグラウンド化(視認不可)した際はハートビートを送り、サーバー側タイムアウトの
-  // 猶予を保つ(タブ切り替え程度で計測を止めてしまわないよう、停止はしない)。
+  // 離脱時に stop を送らない。beforeunload/pagehide はリロードでも発火し、iOS Safari では
+  // bfcache 入りやアプリ切り替えでも pagehide が発火するため、送ってしまうと「リロードしたら
+  // 計測が終わる」「アプリを切り替えたら終わる」になる(issue #29)。
+  // 本当に離脱した場合はサーバー側のハートビートタイムアウト(90秒)が終了させるので、
+  // ここでは離脱直前・復帰時にハートビートを送って猶予を保つだけにする。
   useEffect(() => {
     if (!isRunning) return;
 
-    const handleUnload = () => sendKeepalive('/api/study-sessions/stop', token);
+    const handlePageHide = () => sendKeepalive('/api/study-sessions/heartbeat', token);
     const handleVisibility = () => {
       if (document.visibilityState === 'hidden') {
+        sendKeepalive('/api/study-sessions/heartbeat', token);
+      } else {
+        // 復帰は操作とみなす(バックグラウンド中の時間で放置判定にしない)
+        lastActivityRef.current = Date.now();
         sendKeepalive('/api/study-sessions/heartbeat', token);
       }
     };
 
-    window.addEventListener('beforeunload', handleUnload);
-    window.addEventListener('pagehide', handleUnload);
+    window.addEventListener('pagehide', handlePageHide);
     document.addEventListener('visibilitychange', handleVisibility);
     return () => {
-      window.removeEventListener('beforeunload', handleUnload);
-      window.removeEventListener('pagehide', handleUnload);
+      window.removeEventListener('pagehide', handlePageHide);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [isRunning, token]);

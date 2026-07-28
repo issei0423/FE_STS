@@ -14,6 +14,7 @@ export interface ApiUser {
 
 export interface LoginResponse {
   accessToken: string;
+  refreshToken: string;
   user: ApiUser;
 }
 
@@ -62,7 +63,76 @@ interface RequestOptions {
   isFormData?: boolean;
 }
 
+/**
+ * アクセストークンが失効したときにリフレッシュトークンで再取得するためのフック。
+ * 呼び出し側(App)が保持しているトークンとその保存方法を、ここから触れるようにする。
+ */
+export interface SessionHooks {
+  /** 現在のリフレッシュトークン。無ければ null */
+  getRefreshToken: () => string | null;
+  /** 再発行に成功したときに呼ばれる(新しいトークンの保存用) */
+  onRefreshed: (session: LoginResponse) => void;
+  /** 再発行できずセッションが切れたときに呼ばれる */
+  onExpired: () => void;
+}
+
+let sessionHooks: SessionHooks | null = null;
+let refreshInFlight: Promise<LoginResponse | null> | null = null;
+
+export function configureSession(hooks: SessionHooks | null) {
+  sessionHooks = hooks;
+}
+
+/** 同時に複数のリクエストが401になっても、再発行は1回にまとめる。 */
+function refreshSession(): Promise<LoginResponse | null> {
+  const hooks = sessionHooks;
+  if (!hooks) return Promise.resolve(null);
+
+  if (!refreshInFlight) {
+    const refreshToken = hooks.getRefreshToken();
+    if (!refreshToken) {
+      hooks.onExpired();
+      return Promise.resolve(null);
+    }
+    refreshInFlight = rawRequest<LoginResponse>('/api/auth/refresh', {
+      method: 'POST',
+      body: { refreshToken },
+    })
+      .then((session) => {
+        hooks.onRefreshed(session);
+        return session;
+      })
+      .catch(() => {
+        // リフレッシュトークンも失効・盗難検知で無効化された場合
+        hooks.onExpired();
+        return null;
+      })
+      .finally(() => {
+        refreshInFlight = null;
+      });
+  }
+  return refreshInFlight;
+}
+
+/**
+ * 認証付きリクエストが401になったら、リフレッシュトークンでアクセストークンを
+ * 再取得して1度だけ retry する。アクセストークンの有効期限(1時間)が切れただけで
+ * 強制ログアウトになるのを防ぐ。
+ */
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  try {
+    return await rawRequest<T>(path, options);
+  } catch (err) {
+    const canRetry = err instanceof ApiError && err.status === 401 && !!options.token && !!sessionHooks;
+    if (!canRetry) throw err;
+
+    const session = await refreshSession();
+    if (!session) throw err;
+    return rawRequest<T>(path, { ...options, token: session.accessToken });
+  }
+}
+
+async function rawRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = {};
   if (options.token) {
     headers.Authorization = `Bearer ${options.token}`;
@@ -117,6 +187,13 @@ export const api = {
     }),
 
   devLogin: () => request<LoginResponse>('/api/auth/dev-login', { method: 'POST' }),
+
+  /** ログアウト時にサーバー側のリフレッシュトークンも失効させる(最大14日残るのを防ぐ)。 */
+  logout: (refreshToken: string) =>
+    request<{ message: string }>('/api/auth/logout', {
+      method: 'POST',
+      body: { refreshToken },
+    }),
 
   me: (token: string) => request<ApiUser>('/api/users/me', { token }),
 

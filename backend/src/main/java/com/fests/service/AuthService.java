@@ -8,7 +8,6 @@ import com.fests.entity.EmailVerification;
 import com.fests.entity.User;
 import com.fests.exception.*;
 import com.fests.repository.EmailVerificationRepository;
-import com.fests.repository.UserIconRepository;
 import com.fests.repository.UserRepository;
 import com.fests.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +26,7 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final EmailVerificationRepository verificationRepository;
-    private final UserIconRepository userIconRepository;
+    private final UserIconService userIconService;
     private final PasswordEncoder passwordEncoder;
     private final MailService mailService;
     private final JwtUtil jwtUtil;
@@ -120,12 +119,12 @@ public class AuthService {
     }
 
     private LoginResponse buildLoginResponse(User user) {
-        String iconUrl = userIconRepository.findByUser(user)
-            .map(icon -> "/api/users/" + user.getId() + "/icon")
-            .orElse(null);
+        // アイコンURLの組み立ては UserIconService に一本化する。ここで独自に組み立てると
+        // キャッシュバスタ(?v=更新時刻)が抜け、Cache-Control: immutable と組み合わさって
+        // 変更後も古い画像が表示され続ける(issue #26)。
         return new LoginResponse(
             jwtUtil.generateAccessToken(user),
             refreshTokenService.issue(user),
-            UserDto.from(user, iconUrl));
+            UserDto.from(user, userIconService.iconUrl(user.getId())));
     }
 }

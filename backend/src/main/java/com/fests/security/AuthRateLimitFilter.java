@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.http.MediaType;
 import org.springframework.lang.NonNull;
@@ -53,9 +54,14 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
 
     private final ConcurrentHashMap<String, Window> windows = new ConcurrentHashMap<>();
     private final boolean enabled;
+    private final int trustedProxyCount;
 
-    public AuthRateLimitFilter(Environment environment) {
+    public AuthRateLimitFilter(
+        Environment environment,
+        @Value("${app.security.trusted-proxy-count}") int trustedProxyCount
+    ) {
         this.enabled = !environment.matchesProfiles("test");
+        this.trustedProxyCount = trustedProxyCount;
     }
 
     @Override
@@ -105,15 +111,11 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
     }
 
     /**
-     * クライアントIPの解決。Nginxリバースプロキシ配下では X-Forwarded-For の先頭を使う。
-     * 注意: Nginx側で proxy_set_header X-Forwarded-For $remote_addr を設定し、
-     * クライアントが自称するX-Forwarded-Forを上書きすること(偽装防止)。
+     * クライアントIPの解決。X-Forwarded-For の先頭はクライアントが詐称できるため、
+     * 信頼するプロキシ段数だけ右から遡った値を使う(issue #25、詳細は ClientIpResolver)。
      */
     private String resolveClientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
+        return ClientIpResolver.resolve(
+            request.getHeader("X-Forwarded-For"), request.getRemoteAddr(), trustedProxyCount);
     }
 }
