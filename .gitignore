@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Claude Code の隔離ワークツリー(CLAUDE.md「作業の隔離: git worktree」参照)
+.claude/worktrees/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -1,7 +1,7 @@
 {
-  "schema_version": 1,
-  "last_updated": "2026-07-23T12:40:00+09:00",
-  "lock_rules": "各セッションは作業開始前に active_sessions を確認すること。編集対象ファイルが他セッションの target_files に含まれる場合は、そのセッションの status が 'idle' に戻るまで着手しない。作業開始時は自分のエントリの status を 'editing' にし、task・target_files・started_at を埋める。作業完了時は status を 'idle'、task を null、target_files を []、started_at を null に戻す。衝突を検知した場合は status を 'blocked' にし、note に理由を書く。sync-state.json を更新したら、必ず docs/sync-log.md にも対応する行を追記すること(追記のみ、既存行は書き換えない)。",
+  "schema_version": 2,
+  "last_updated": "2026-07-28T11:19:46+09:00",
+  "lock_rules": "ファイルを変更する作業は必ずワークツリー内で行う(CLAUDE.md「作業の隔離: git worktree」参照)。ただし、このファイルと docs/sync-log.md は例外で、常に本体 C:\\Users\\calif\\FE_STS 側を編集し main にコミットする(ワークツリー内のコピーを編集しない)。各セッションは作業開始前に active_sessions を確認すること。編集対象ファイルが他セッションの target_files に含まれる場合は、そのセッションの status が 'idle' に戻るまで着手しない。作業開始時は自分のエントリの status を 'editing' にし、task・target_files・started_at・worktree・branch を埋める。作業完了時は status を 'idle'、task を null、target_files を []、started_at・worktree・branch を null に戻す。衝突を検知した場合は status を 'blocked' にし、note に理由を書く。sync-state.json を更新したら、必ず docs/sync-log.md にも対応する行を追記すること(追記のみ、既存行は書き換えない)。",
   "active_sessions": {
     "ide-sts": {
       "session_id": "ide-sts",
@@ -9,6 +9,8 @@
       "task": null,
       "target_files": [],
       "started_at": null,
+      "worktree": null,
+      "branch": null,
       "note": "docs/10_render_env_fix_runbook.md作成済み(2026-07-17、未コミット)。ターミナルセッションがclaude-in-chromeでRender環境変数(CORS_ALLOWED_ORIGINS等)を修正するための手順書。IDE側のリポジトリ修正(Dockerfile等)も未コミットのまま"
     },
     "terminal-claude-code": {
@@ -17,7 +19,9 @@
       "task": null,
       "target_files": [],
       "started_at": null,
-      "note": "メール不達修正のコード変更はローカルmain commit 2c78483で完了(未push)。原因はRender無料プランのoutbound SMTP(25/465/587)ブロック。残作業はcowork側に委譲: (1)BrevoでAPIキー生成(Settings→SMTP & API→API Keys) (2)Render fests-backendの環境変数にBREVO_API_KEY追加・BREVO_SMTP_USER/PASSWORD削除 (3)ユーザー承認を得て2c78483をpush(Render自動デプロイ) (4)本番サインアップでメール受信確認。手順詳細はdocs/04(改訂済)とdocs/08参照。"
+      "worktree": null,
+      "branch": null,
+      "note": "2026-07-28: git worktree運用を全面導入(CLAUDE.mdに「作業の隔離: git worktree」節を追加、.gitignoreに.claude/worktrees/を追加、本ファイルにworktree/branchフィールドを追加)。以降、ファイル変更を伴う作業はワークツリー内で行うこと。なお、メール不達修正のcommit 2c78483は2026-07-28時点でorigin/mainにpush済み(main == origin/main)。RenderへのBREVO_API_KEY設定と本番でのメール受信確認が実施済みかは未確認。"
     },
     "cowork": {
       "session_id": "cowork",
@@ -25,6 +29,8 @@
       "task": null,
       "target_files": [],
       "started_at": null,
+      "worktree": null,
+      "branch": null,
       "note": null
     }
   }
