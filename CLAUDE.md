@@ -27,6 +27,7 @@
 1. `git fetch` し、`git log --oneline origin/main..main` が空(本体mainがpush済み)であることを確認する。空でなければ他セッションの未pushコミットがあるので、先にユーザーに確認する
 2. `EnterWorktree` ツールでワークツリーを作成する。`name` は `<session-id>/<topic>` 形式にする(例: `terminal-claude-code/fix-verify-mail`)
    - 作成先は `.claude/worktrees/<name>/`、分岐元は既定で `origin/main`(設定 `worktree.baseRef` の既定値 `fresh`)。ローカルHEADから分岐したい場合だけ `head` に変える
+   - 実際のディレクトリ名・ブランチ名では `/` が `+` に変換される。例: `terminal-claude-code/gitignore-env` → ディレクトリ `.claude/worktrees/terminal-claude-code+gitignore-env`、ブランチ `worktree-terminal-claude-code+gitignore-env`。sync-state.jsonの `branch` には変換後の実際のブランチ名を書く
    - `git worktree add` で手動作成済みのものに入る場合は、`name` ではなく `path` を渡す
 3. `docs/sync-state.json` の自分のエントリに、`worktree` と `branch` を記録する(後述)
 
@@ -55,12 +56,18 @@
 
 ### 終了手順
 
+**順序が重要**。mainへのマージは本体側でしかできない(mainは本体にチェックアウトされているため、ワークツリー内で `git checkout main` はgitに拒否される)。したがって「ワークツリー内でコミット → 本体に戻る → マージ」の順に行う。
+
 1. そのワークツリーで起動した開発サーバー・Dockerコンテナ等を**必ず停止する**。起動したままだとファイルがロックされ、削除に失敗する(過去に、起動中のSpring Bootが原因でフォルダを削除できない事象が発生している)
-2. 変更をmainに取り込む(マージ、またはPR)。`git push` は従来どおり**ユーザーに変更内容を提示し、明示的な承認を得てから**実行する
-3. `ExitWorktree` で本体に戻る
-   - 取り込み済みで破棄してよい → `action: "remove"`(未コミット変更や未マージコミットがあると拒否される。破棄してよいと確認できた場合のみ `discard_changes: true` を付ける)
-   - 後日続ける → `action: "keep"`
-4. `docs/sync-state.json` の自分のエントリを `idle` に戻し、`worktree` と `branch` も `null` に戻す
+2. ワークツリー内で変更をコミットする
+3. `ExitWorktree` を `action: "keep"` で実行し、本体に戻る。**この時点で `remove` を使ってはいけない**(未マージのコミットがあるため拒否される)
+4. 本体で `git merge <branch>` してmainに取り込む(レビューが要る場合はPR)。`git push` は従来どおり**ユーザーに変更内容を提示し、明示的な承認を得てから**実行する
+5. マージ後、不要になったワークツリーとブランチを削除する
+   - `git worktree remove .claude/worktrees/<dir>`
+   - `git branch -d <branch>`
+6. `docs/sync-state.json` の自分のエントリを `idle` に戻し、`worktree` と `branch` も `null` に戻す
+
+作業を後日に持ち越す場合は、3で `keep` したまま4以降を行わず、`worktree`/`branch` をsync-state.jsonに残しておく。
 
 ## ファイル編集の衝突を防ぐ: sync-state.json
 
