@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# 機密情報(CLAUDE.md「機密情報はソースやドキュメントに直書きしない」参照)
+# .env.example はテンプレートなので追跡対象のまま残す
+.env
+.env.*
+!.env.example
+
 # Claude Code の隔離ワークツリー(CLAUDE.md「作業の隔離: git worktree」参照)
 .claude/worktrees/
 
