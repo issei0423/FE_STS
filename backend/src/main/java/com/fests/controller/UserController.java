@@ -1,6 +1,5 @@
 package com.fests.controller;
 
-import com.fests.dto.MessageResponse;
 import com.fests.dto.UserDto;
 import com.fests.dto.UserRosterEntry;
 import com.fests.entity.User;
@@ -29,8 +28,7 @@ public class UserController {
     @GetMapping("/me")
     public ResponseEntity<UserDto> me(Authentication authentication) {
         User user = currentUserResolver.resolve(authentication);
-        String iconUrl = "/api/users/" + user.getId() + "/icon";
-        return ResponseEntity.ok(UserDto.from(user, user.getIconPath() != null ? iconUrl : null));
+        return ResponseEntity.ok(UserDto.from(user, userIconService.iconUrl(user.getId())));
     }
 
     /** ログイン中の全ユーザーの一覧・ランキング表示用ロースター(オンライン/勉強中/オフラインを含む)。 */
@@ -39,22 +37,25 @@ public class UserController {
         return ResponseEntity.ok(userRosterService.listRoster());
     }
 
+    /** 更新後のプロフィール(新しい iconUrl を含む)を返し、呼び出し側が即座に表示を差し替えられるようにする。 */
     @PostMapping(value = "/me/icon", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<MessageResponse> uploadIcon(
+    public ResponseEntity<UserDto> uploadIcon(
         Authentication authentication,
         @RequestParam("file") MultipartFile file
     ) {
         User user = currentUserResolver.resolve(authentication);
         userIconService.upload(user, file);
-        return ResponseEntity.ok(new MessageResponse("アイコンを更新しました"));
+        return ResponseEntity.ok(UserDto.from(user, userIconService.iconUrl(user.getId())));
     }
 
     @GetMapping("/{id}/icon")
     public ResponseEntity<byte[]> getIcon(@PathVariable Long id) {
         UserIconService.IconFile icon = userIconService.getIcon(id);
+        // URL に更新時刻(?v=)が入っており、差し替えれば別URLになるため長期キャッシュして良い。
+        // 逆にURLが同じ間は中身も変わらないので、古い画像が残り続けることはない。
         return ResponseEntity.ok()
             .contentType(MediaType.parseMediaType(icon.mimeType()))
-            .header(HttpHeaders.CACHE_CONTROL, "private, max-age=3600")
+            .header(HttpHeaders.CACHE_CONTROL, "private, max-age=31536000, immutable")
             .body(icon.data());
     }
 }

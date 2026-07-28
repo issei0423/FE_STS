@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -36,4 +37,9 @@ public class UserIcon {
     @Column(name = "uploaded_at", nullable = false, updatable = false)
     @CreationTimestamp
     private LocalDateTime uploadedAt;
+
+    /** 画像URLのキャッシュバスタに使う。差し替えのたびに更新される。 */
+    @Column(name = "updated_at", nullable = false)
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
 }

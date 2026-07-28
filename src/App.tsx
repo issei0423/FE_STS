@@ -139,8 +139,8 @@ function App() {
 
   const handleAvatarChange = async (file: File) => {
     if (!token || !apiUser) return;
-    await api.uploadIcon(token, file);
-    setApiUser({ ...apiUser, iconUrl: `${api.iconUrl(apiUser.id)}?t=${Date.now()}` });
+    // レスポンスが更新後のプロフィール(新しい iconUrl)を返すので、それをそのまま採用する。
+    setApiUser(await api.uploadIcon(token, file));
   };
 
   if (wakeupStatus === 'waking') {
@@ -163,7 +163,8 @@ function App() {
     id: String(apiUser.id),
     name: fullName,
     initials: apiUser.role === 'DEVELOPER' ? DEV_AVATAR_MARK : apiUser.lastName,
-    avatarUrl: apiUser.iconUrl ?? undefined,
+    // iconUrl はAPI側の相対パスなので、他ユーザー(下の roster)と同じくオリジンを付ける。
+    avatarUrl: apiUser.iconUrl ? `${API_BASE_URL}${apiUser.iconUrl}` : undefined,
     status: isStudying ? 'studying' : 'online',
     currentSessionMinutes: isStudying ? studyMinutes : 0,
     totalStudyHours: 0,

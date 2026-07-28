@@ -24,6 +24,7 @@ public class UserRosterService {
 
     private final UserRepository userRepository;
     private final StudySessionRepository studySessionRepository;
+    private final UserIconService userIconService;
 
     @Value("${app.presence.online-threshold-minutes}")
     private int onlineThresholdMinutes;
@@ -45,8 +46,13 @@ public class UserRosterService {
 
         LocalDateTime onlineThreshold = now.minusMinutes(onlineThresholdMinutes);
 
+        // アイコンURLは users.icon_path ではなく user_icons(実データ)から引く。更新時刻が
+        // URLに乗るので、誰かが画像を差し替えたら次回のロースター取得で自動的に新URLになる。
+        Map<Long, String> iconUrlByUserId = userIconService.iconUrls();
+
         return users.stream()
-            .map(user -> toEntry(user, runningByUserId.get(user.getId()), totalSecByUserId, now, onlineThreshold))
+            .map(user -> toEntry(
+                user, runningByUserId.get(user.getId()), totalSecByUserId, iconUrlByUserId, now, onlineThreshold))
             .toList();
     }
 
@@ -54,12 +60,13 @@ public class UserRosterService {
         User user,
         StudySession running,
         Map<Long, Long> totalSecByUserId,
+        Map<Long, String> iconUrlByUserId,
         LocalDateTime now,
         LocalDateTime onlineThreshold
     ) {
         long totalSec = totalSecByUserId.getOrDefault(user.getId(), 0L);
         double totalHours = totalSec / 3600.0;
-        String iconUrl = user.getIconPath() != null ? "/api/users/" + user.getId() + "/icon" : null;
+        String iconUrl = iconUrlByUserId.get(user.getId());
 
         if (running != null) {
             int minutes = (int) Duration.between(running.getStartedAt(), now).toMinutes();

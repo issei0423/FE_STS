@@ -122,18 +122,17 @@ export const api = {
 
   listUsers: (token: string) => request<RosterEntry[]>('/api/users', { token }),
 
+  /** 更新後のプロフィールを返す。iconUrl には更新時刻が入るのでキャッシュバスタは不要。 */
   uploadIcon: (token: string, file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    return request<{ message: string }>('/api/users/me/icon', {
+    return request<ApiUser>('/api/users/me/icon', {
       method: 'POST',
       token,
       body: formData,
       isFormData: true,
     });
   },
-
-  iconUrl: (userId: number) => `${API_BASE_URL}/api/users/${userId}/icon`,
 
   startSession: (token: string) =>
     request<StudySessionResponse>('/api/study-sessions/start', { method: 'POST', token }),
