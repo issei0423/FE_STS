@@ -21,7 +21,7 @@
       "started_at": null,
       "worktree": null,
       "branch": null,
-      "note": "2026-07-28: git worktree運用を全面導入(CLAUDE.mdに「作業の隔離: git worktree」節を追加、.gitignoreに.claude/worktrees/を追加、本ファイルにworktree/branchフィールドを追加)。以降、ファイル変更を伴う作業はワークツリー内で行うこと。なお、メール不達修正のcommit 2c78483は2026-07-28時点でorigin/mainにpush済み(main == origin/main)。RenderへのBREVO_API_KEY設定と本番でのメール受信確認が実施済みかは未確認。"
+      "note": "2026-07-28: git worktree運用を全面導入し、同一session_idが複数同時稼働する場合の枝番ルールもCLAUDE.mdに追加済み。未完の作業が2件ある: (1)アイコン修正(commit 4f20274)はpush済みでRenderは自動デプロイ済みだが、フロントの `npx wrangler deploy` がCloudflare APIへのConnectionTimeoutで未完。dist/は本番URL(VITE_API_BASE_URL=https://fests-backend.onrender.com)埋め込みでビルド済みなので、ネットワークが回復したら deploy するだけ。未デプロイの間は「自分のアイコンだけ表示されない」状態が残る (2)render.yamlの環境変数がBREVO_SMTP_USER/PASSWORDのままでBREVO_API_KEYに未追従(2c78483のHTTP API切り替えと不整合)。RenderへのBREVO_API_KEY設定と本番メール受信確認も実施済みか未確認。"
     },
     "cowork": {
       "session_id": "cowork",
