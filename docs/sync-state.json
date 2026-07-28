@@ -21,7 +21,7 @@
       "started_at": null,
       "worktree": null,
       "branch": null,
-      "note": "2026-07-28: git worktree運用を全面導入し、同一session_idが複数同時稼働する場合の枝番ルールもCLAUDE.mdに追加済み。アイコン修正(commit 4f20274)はpush済み・Render自動デプロイ済みで、フロントも2026-07-28 12:5x に wrangler deploy 完了(Version ID 85c9c1a1-d41c-47ef-8a0f-1cf61716a6d5、VITE_API_BASE_URL=https://fests-backend.onrender.com 埋め込み)。本番での動作確認(アイコン設定→再ログインで残るか、他ユーザーから見えるか)はユーザー未実施。未完の作業が1件ある: render.yamlの環境変数がBREVO_SMTP_USER/PASSWORDのままでBREVO_API_KEYに未追従(2c78483のHTTP API切り替えと不整合)。RenderへのBREVO_API_KEY設定と本番メール受信確認も実施済みか未確認。"
+      "note": "2026-07-28: open issue 全9件(#22 #24 #25 #26 #27 #28 #29 #30 #31)を修正しmainへマージ済み(merge ff64812 / commit 7ffb4f6、mvn test 46件・npm build/lint OK)。ネットワーク不調でpushとissueクローズは未実施のため要対応。未完の作業: (1)アイコン修正・今回の9件とも本番での実動作確認はユーザー未実施(フロントは12:5x に wrangler deploy 済み、今回の9件分は未デプロイ) (2)render.yamlの環境変数がBREVO_SMTP_USER/PASSWORDのままでBREVO_API_KEYに未追従(2c78483のHTTP API切り替えと不整合)。RenderへのBREVO_API_KEY設定と本番メール受信確認も実施済みか未確認 (3)今回 app.presence.touch-throttle-seconds と app.security.trusted-proxy-count を追加したので、Renderの実ヘッダを確認のうえ TRUSTED_PROXY_COUNT の要否を判断すること(既定1)。"
     },
     "cowork": {
       "session_id": "cowork",
