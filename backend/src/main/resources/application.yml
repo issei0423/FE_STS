@@ -42,6 +42,12 @@ app:
     expose-verification-link: false
   presence:
     online-threshold-minutes: ${ONLINE_THRESHOLD_MINUTES:5}
+    # last_seen_at の更新間隔。オンライン判定のしきい値より十分短くすること(issue #30)
+    touch-throttle-seconds: ${TOUCH_THROTTLE_SECONDS:60}
+  security:
+    # 信頼するリバースプロキシの段数。X-Forwarded-For を右から数えてこの数だけ遡った
+    # 位置をクライアントIPとみなす(issue #25)。プロキシを介さない場合は 0 にする
+    trusted-proxy-count: ${TRUSTED_PROXY_COUNT:1}
   study-session:
     heartbeat-timeout-seconds: ${HEARTBEAT_TIMEOUT_SECONDS:90}
     max-duration-hours: ${MAX_SESSION_DURATION_HOURS:8}

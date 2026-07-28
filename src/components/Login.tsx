@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from 'react';
-import { api, ApiError, type ApiUser } from '../api/client';
+import { api, ApiError, type LoginResponse } from '../api/client';
 
 interface LoginProps {
-  onAuthenticated: (accessToken: string, user: ApiUser, rememberMe: boolean) => void;
+  onAuthenticated: (session: LoginResponse, rememberMe: boolean) => void;
   verifyError?: string;
 }
 
@@ -58,7 +58,7 @@ export function Login({ onAuthenticated, verifyError }: LoginProps) {
     setSubmitting(true);
     try {
       const res = await api.login(loginEmail.trim(), loginPassword);
-      onAuthenticated(res.accessToken, res.user, loginRememberMe);
+      onAuthenticated(res, loginRememberMe);
     } catch (err) {
       setLoginError(err instanceof ApiError ? err.message : 'ログインに失敗しました');
     } finally {
@@ -103,7 +103,7 @@ export function Login({ onAuthenticated, verifyError }: LoginProps) {
     setSubmitting(true);
     try {
       const res = await api.verify(token);
-      onAuthenticated(res.accessToken, res.user, rememberMe);
+      onAuthenticated(res, rememberMe);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : '確認に失敗しました');
     } finally {
@@ -115,7 +115,7 @@ export function Login({ onAuthenticated, verifyError }: LoginProps) {
     setSubmitting(true);
     try {
       const res = await api.devLogin();
-      onAuthenticated(res.accessToken, res.user, false);
+      onAuthenticated(res, false);
     } catch (err) {
       setLoginError(err instanceof ApiError ? err.message : '開発者ログインに失敗しました');
     } finally {

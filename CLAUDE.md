@@ -36,7 +36,7 @@
 新しいワークツリーは、**gitignore対象のファイルを一切引き継がない**。必要に応じて用意する。
 
 - フロントエンド: `npm install` を実行する(`node_modules` はワークツリーごとに必要)
-- バックエンド: Maven依存は `~/.m2` を共有するため追加ダウンロードは不要。ただし `backend/data/fests-local.mv.db`(localプロファイルのH2、`jdbc:h2:file:./data/fests-local` と相対パス指定)は**空の状態から作り直しになる**。既存のローカルデータが必要なら本体の `backend/data/` をコピーする
+- バックエンド: Maven依存は `~/.m2` を共有するため追加ダウンロードは不要。ただし `backend/data/fests-local.mv.db`(localプロファイルのH2、`jdbc:h2:file:./data/fests-local` と相対パス指定)は**空の状態から作り直しになる**。これは正常な状態なので、**本体の `backend/data/` をコピーしないこと**。localプロファイルは Flyway 無効 + `ddl-auto: update` で、`update` は列を削除しないため、古いDBを持ち込むと削除済みの列(例: V9で消した `user_icons.file_path`、NOT NULL)が残り、アイコンのアップロードが必ず失敗する(issue #27)。同じ理由で、本体側のDBが古くて動かない場合も `backend/data/` を削除して作り直す
 - 環境変数: リポジトリに `.env` は無く `.env.example`(`VITE_API_BASE_URL`)のみ。ローカル起動に必要な値は `application-local.yml` に入っているためコピー作業は不要
 
 ### 本体(`C:\Users\calif\FE_STS`)で行う例外

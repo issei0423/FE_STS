@@ -37,6 +37,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/users/*/icon").permitAll()
                 .requestMatchers("/actuator/health").permitAll()
+                // 例外発生時のERRORディスパッチ(/error へのフォワード)は匿名扱いになるため、
+                // 許可しておかないと本来500/400であるべき応答がすべて401空ボディに化ける(issue #24)
+                .requestMatchers("/error").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(authRateLimitFilter, UsernamePasswordAuthenticationFilter.class)

@@ -1,6 +1,7 @@
 package com.fests;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fests.dto.LoginRequest;
 import com.fests.dto.LoginResponse;
 import com.fests.dto.SignupRequest;
 import com.fests.entity.EmailVerification;
@@ -33,8 +34,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 class UserIconIntegrationTest {
 
-    private static final byte[] PNG_A = {(byte) 0x89, 'P', 'N', 'G', 1, 2, 3, 4};
-    private static final byte[] PNG_B = {(byte) 0x89, 'P', 'N', 'G', 9, 8, 7, 6, 5};
+    /** PNGのマジックバイト(先頭8バイト)+ ペイロード。issue #31 の検証を通る形にしてある。 */
+    private static final byte[] PNG_A = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3, 4};
+    private static final byte[] PNG_B = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, 9, 8, 7, 6, 5};
+    private static final byte[] SVG_BYTES =
+        "<svg xmlns=\"http://www.w3.org/2000/svg\"><script>alert(1)</script></svg>".getBytes(StandardCharsets.UTF_8);
 
     @Autowired
     private MockMvc mockMvc;
@@ -138,6 +142,60 @@ class UserIconIntegrationTest {
             .andExpect(status().isOk())
             .andReturn().getResponse().getContentAsByteArray();
         assertThat(served).isEqualTo(PNG_B);
+    }
+
+    /** issue #26: ログイン応答のURLだけ ?v= が抜けていると、1年キャッシュで古い画像が残り続ける。 */
+    @Test
+    void loginResponse_iconUrl_hasCacheBuster() throws Exception {
+        String email = "icon-login@sankogakuen.jp";
+        String bearer = registerAndGetBearerToken("再ログイン", "五郎", email);
+        String uploadedUrl = uploadIcon(bearer, PNG_A);
+
+        LoginRequest login = new LoginRequest();
+        login.setEmail(email);
+        login.setPassword("password123");
+
+        String body = mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(login)))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+
+        String iconUrl = objectMapper.readTree(body).get("user").get("iconUrl").asText();
+        assertThat(iconUrl).contains("/icon?v=").isEqualTo(uploadedUrl);
+    }
+
+    /** issue #31: Content-Typeの自己申告ではなく中身で判定する(スクリプト入りSVGを保存させない)。 */
+    @Test
+    void uploadIcon_rejectsSvgDeclaredAsImage() throws Exception {
+        String bearer = registerAndGetBearerToken("SVG", "六郎", "icon-svg@sankogakuen.jp");
+
+        mockMvc.perform(multipart("/api/users/me/icon")
+                .file(new MockMultipartFile("file", "evil.svg", "image/svg+xml", SVG_BYTES))
+                .header("Authorization", bearer))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("INVALID_FILE_TYPE"));
+    }
+
+    /** issue #31: 拡張子・Content-Typeを画像に偽装しても、中身が画像でなければ弾く。 */
+    @Test
+    void uploadIcon_rejectsNonImageBytesDeclaredAsPng() throws Exception {
+        String bearer = registerAndGetBearerToken("偽装", "七郎", "icon-fake@sankogakuen.jp");
+
+        mockMvc.perform(multipart("/api/users/me/icon")
+                .file(new MockMultipartFile("file", "avatar.png", MediaType.IMAGE_PNG_VALUE,
+                    "not an image".getBytes(StandardCharsets.UTF_8)))
+                .header("Authorization", bearer))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("INVALID_FILE_TYPE"));
+    }
+
+    /** issue #24: 型変換に失敗するパスは401ではなく400を返す(401だとフロントが勝手にログアウトする)。 */
+    @Test
+    void iconRequest_withNonNumericId_isBadRequest() throws Exception {
+        mockMvc.perform(get("/api/users/abc/icon"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("INVALID_PARAMETER"));
     }
 
     @Test

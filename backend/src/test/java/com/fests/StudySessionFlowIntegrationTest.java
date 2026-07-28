@@ -99,13 +99,17 @@ class StudySessionFlowIntegrationTest {
             .andExpect(status().isUnauthorized());
     }
 
+    /** PNGのマジックバイト(先頭8バイト)+ 適当なペイロード。中身の検証を通る最小のPNG相当データ。 */
+    private static final byte[] PNG_BYTES =
+        {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3, 4};
+
     @Test
     void uploadIcon_thenFetchIcon_roundTrips() throws Exception {
         String bearer = registerAndGetBearerToken("icon-user@sankogakuen.jp");
         var user = userRepository.findByEmail("icon-user@sankogakuen.jp").orElseThrow();
 
         MockMultipartFile file = new MockMultipartFile(
-            "file", "avatar.png", "image/png", new byte[]{1, 2, 3, 4}
+            "file", "avatar.png", "image/png", PNG_BYTES
         );
 
         mockMvc.perform(multipart("/api/users/me/icon").file(file).header("Authorization", bearer))
@@ -113,7 +117,7 @@ class StudySessionFlowIntegrationTest {
 
         mockMvc.perform(get("/api/users/" + user.getId() + "/icon"))
             .andExpect(status().isOk())
-            .andExpect(content().bytes(new byte[]{1, 2, 3, 4}));
+            .andExpect(content().bytes(PNG_BYTES));
     }
 
     @Test
