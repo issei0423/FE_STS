@@ -21,7 +21,7 @@
       "started_at": null,
       "worktree": null,
       "branch": null,
-      "note": "2026-07-28: open issue 全9件(#22 #24 #25 #26 #27 #28 #29 #30 #31)を修正しmainへマージ済み(merge ff64812 / commit 7ffb4f6、mvn test 46件・npm build/lint OK)。ネットワーク不調でpushとissueクローズは未実施のため要対応。未完の作業: (1)アイコン修正・今回の9件とも本番での実動作確認はユーザー未実施(フロントは12:5x に wrangler deploy 済み、今回の9件分は未デプロイ) (2)render.yamlの環境変数がBREVO_SMTP_USER/PASSWORDのままでBREVO_API_KEYに未追従(2c78483のHTTP API切り替えと不整合)。RenderへのBREVO_API_KEY設定と本番メール受信確認も実施済みか未確認 (3)今回 app.presence.touch-throttle-seconds と app.security.trusted-proxy-count を追加したので、Renderの実ヘッダを確認のうえ TRUSTED_PROXY_COUNT の要否を判断すること(既定1)。"
+      "note": "2026-07-28: open issue 全9件(#22 #24 #25 #26 #27 #28 #29 #30 #31)を修正しmainへマージ・push済み(d3c4074、mvn test 46件・npm build/lint OK)、9件ともクローズ済み。作業中に別セッションがissue #32〜#37を新規起票しており未着手。未完の作業: (1)アイコン修正・今回の9件とも本番での実動作確認はユーザー未実施(フロントは12:5x に wrangler deploy 済み、今回の9件分は未デプロイ) (2)render.yamlの環境変数がBREVO_SMTP_USER/PASSWORDのままでBREVO_API_KEYに未追従(2c78483のHTTP API切り替えと不整合)。RenderへのBREVO_API_KEY設定と本番メール受信確認も実施済みか未確認 (3)今回 app.presence.touch-throttle-seconds と app.security.trusted-proxy-count を追加したので、Renderの実ヘッダを確認のうえ TRUSTED_PROXY_COUNT の要否を判断すること(既定1)。"
     },
     "cowork": {
       "session_id": "cowork",
